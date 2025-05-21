@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="utf-8" />
+  <title>PDF Generator KS</title>
+  <!-- Link til din originale styles.css -->
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Minimal CSS for .btn-clear (kan flyttes til styles.css) -->
+  <style>
+    /* ============================================= */
+    /* TILFØJET KODE KUN FOR 'RYD FILER'-KNAPPEN    */
+    /* ============================================= */
+
+    .btn-clear {
+      /* Styling der matcher .btn */
+      background: linear-gradient(145deg, var(--accent-1) 0%, var(--accent-2) 100%);
+      border: 2px solid var(--primary-2);
+      border-radius: 8px; /* Samme som .btn */
+      color: var(--primary-2);
+      font-weight: 600;
+      letter-spacing: -0.01em; /* Samme som .btn */
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* Samme som .btn */
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3); /* Samme som .btn */
+      cursor: pointer;
+
+      /* Justeringer for at gøre den lidt mindre/sekundær */
+      padding: 5px 10px; /* Mindre padding end .btn */
+      font-size: 0.9em; /* Lidt mindre skriftstørrelse */
+
+      /* Layout & Spacing */
+      /* Fordi input[type=file] er width:100%, vil denne knap sandsynligvis komme på linjen under. */
+      display: inline-block; /* Gør det muligt at anvende margin */
+      margin-top: 5px;  /* Lidt luft over knappen, hvis den er på ny linje */
+      margin-bottom: 10px; /* Lidt luft under knappen */
+      vertical-align: middle; /* Forsøg at justere lodret */
+    }
+
+    .btn-clear:hover {
+      /* Samme hover effekt som .btn */
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    /* Lidt plads efter fil-input før Ryd-knappen (hvis de ender inline) */
+     input[type="file"] {
+        margin-right: 5px;
+        vertical-align: middle;
+     }
+     /* Gendan standard margin for input hvis den blev ændret */
+     input[type="text"],
+     input[type="file"] {
+         /* Fjern width: 100% hvis du vil have dem inline */
+         /* width: auto; */
+         /* Bevar margin-bottom hvis de er block eller width 100% */
+          margin-bottom: 15px;
+     }
+
+     /* Stilarter for folder structure display */
+     .folder-section {
+       margin-bottom: 20px;
+       padding: 10px;
+       border: 1px solid #eee;
+       border-radius: 4px;
+     }
+     
+     .folder-subpoint {
+       margin-bottom: 10px;
+       padding: 8px;
+       border: 1px solid #f0f0f0;
+       border-radius: 4px;
+     }
+     
+     /* Formatér checkboxes */
+     input[type="checkbox"] {
+       width: 16px;
+       height: 16px;
+       margin-right: 4px;
+       vertical-align: middle;
+     }
+     
+     .checkbox-container {
+       display: flex;
+       align-items: center;
+       margin-bottom: 5px;
+     }
+     
+     .checkbox-label {
+       margin-left: 5px;
+       font-size: 0.9em;
+     }
+    /* ============================================= */
+    /* SLUT PÅ TILFØJET KODE                       */
+    /* ============================================= */
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>PDF Generator KS</h1>
+    <div>
+      <label><strong>Upload forside (PDF):</strong></label>
+      <input type="file" id="coverInput" accept="application/pdf" />
+      <button class="btn btn-clear" id="clearCoverBtn" title="Ryd valgt forside">Ryd filer</button>
+    </div>
+    <hr />
+    <div>
+      <label><strong>Upload mappe med punkter:</strong></label>
+      <input type="file" id="folderInput" webkitdirectory directory multiple />
+      <button class="btn btn-clear" id="clearFolderBtn" title="Ryd valgte mapper">Ryd mapper</button>
+    </div>
+    <div id="folderStructurePreview"></div>
+    <hr />
+    <div>
+      <label for="pdfNameInput">Navn på PDF (uden .pdf): </label>
+      <input type="text" id="pdfNameInput" value="samlet" />
+    </div>
+    <div>
+      <button class="btn" id="generatePDF">Generér samlet PDF</button>
+    </div>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script>
+      // Reference til containeren hvor strukturen vises
+      const folderStructurePreview = document.getElementById('folderStructurePreview');
+      
+      // Referencer til input elementer
+      const coverInput = document.getElementById('coverInput');
+      const folderInput = document.getElementById('folderInput');
+      const clearCoverBtn = document.getElementById('clearCoverBtn');
+      const clearFolderBtn = document.getElementById('clearFolderBtn');
+      
+      // Data struktur til at holde filer organiseret efter mapper
+      let folderStructure = {
+        sections: [] // Array af hovedpunkter (top-level mapper)
+      };
+      
+      // Event listener for ryd forside-knap
+      clearCoverBtn.addEventListener('click', () => {
+        coverInput.value = ''; // Nulstil filvalget i input-feltet
+        console.log('Forside filvalg ryddet.');
+      });
+      
+      // Event listener for ryd mapper-knap
+      clearFolderBtn.addEventListener('click', () => {
+        folderInput.value = ''; // Nulstil filvalget i input-feltet
+        folderStructure = { sections: [] }; // Nulstil datastrukturen
+        renderFolderStructure(); // Opdater visningen
+        console.log('Mappe struktur ryddet.');
+      });
+      
+      // Hjælpefunktion til at generere unikke id'er
+      const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
+      
+      // Event listener for mappe-upload
+      folderInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        processUploadedFiles(files);
+      });
+
+      // Funktion til at behandle de uploadede filer og organisere dem i en mappestruktur
+      function processUploadedFiles(files) {
+        // Nulstil den eksisterende struktur
+        folderStructure = { sections: [] };
+        
+        // Vi skal først identificere alle unikke sti-dele for at opbygge strukturen
+        const pathMap = new Map(); // Map fra sti til sektion/subsektion objekt
+        
+        // Sorter filerne efter deres sti, så vi kan behandle mapper i rækkefølge
+        files.sort((a, b) => a.webkitRelativePath.localeCompare(b.webkitRelativePath));
+        
+        // Første gennemgang: opbyg mappestrukturen
+        files.forEach(file => {
+          const path = file.webkitRelativePath;
+          const pathParts = path.split('/');
+          
+          // Accepter kun PDF- og JPEG-filer
+          if (!file.type.match('application/pdf') && !file.type.match('image/jpeg')) {
+            console.warn(`Fil ignoreret (ikke PDF/JPEG): ${path}`);
+            return;
+          }
+          
+          // Vi har kun brug for maximum to niveauer (hovedpunkt/underpunkt)
+          if (pathParts.length > 1) {
+            const topLevelFolder = pathParts[0];
+            const secondLevelFolder = pathParts.length > 2 ? pathParts[1] : null;
+            
+            // Opret hovedpunktet hvis det ikke findes
+            if (!pathMap.has(topLevelFolder)) {
+              const sectionId = generateId();
+              const section = {
+                id: sectionId,
+                title: topLevelFolder,
+                files: [],
+                subpoints: [],
+                showInToc: true
+              };
+              folderStructure.sections.push(section);
+              pathMap.set(topLevelFolder, section);
+            }
+            
+            const section = pathMap.get(topLevelFolder);
+            
+            // Hvis der er en undermappe, opret underpunktet
+            if (secondLevelFolder && pathParts.length > 2) {
+              const subpointKey = `${topLevelFolder}/${secondLevelFolder}`;
+              
+              if (!pathMap.has(subpointKey)) {
+                const subpointId = generateId();
+                const subpoint = {
+                  id: subpointId,
+                  title: secondLevelFolder,
+                  files: [],
+                  showInToc: true
+                };
+                section.subpoints.push(subpoint);
+                pathMap.set(subpointKey, subpoint);
+              }
+              
+              // Tilføj filen til underpunktet
+              if (pathParts.length > 2) {
+                pathMap.get(subpointKey).files.push(file);
+              }
+            } 
+            // Hvis filen er direkte i hovedmappen (ingen undermappe)
+            else if (pathParts.length == 2) {
+              section.files.push(file);
+            }
+          }
+        });
+        
+        // Sorter sektioner og undersektioner alfabetisk
+        folderStructure.sections.sort((a, b) => a.title.localeCompare(b.title));
+        folderStructure.sections.forEach(section => {
+          section.subpoints.sort((a, b) => a.title.localeCompare(b.title));
+        });
+        
+        // Opdater visningen af strukturen
+        renderFolderStructure();
+      }
+      
+      // Funktion til at vise mappestrukturen i brugergrænsefladen
+      function renderFolderStructure() {
+        folderStructurePreview.innerHTML = '';
+        
+        if (folderStructure.sections.length === 0) {
+          folderStructurePreview.innerHTML = '<p>Ingen mapper uploadet. Upload en mappe for at se strukturen her.</p>';
+          return;
+        }
+        
+        const structureContainer = document.createElement('div');
+        structureContainer.className = 'folder-structure';
+        
+        // Gennemgå alle hovedpunkter (top-level mapper)
+        folderStructure.sections.forEach(section => {
+          const sectionDiv = document.createElement('div');
+          sectionDiv.className = 'folder-section';
+          
+          // Tilføj checkbox-container for sektion
+          const checkboxContainer = document.createElement('div');
+          checkboxContainer.className = 'checkbox-container';
+          
+          // Vis hovedpunktets titel
+          const sectionTitle = document.createElement('h3');
+          sectionTitle.textContent = section.title;
+          sectionTitle.style.margin = '0';
+          sectionTitle.style.marginRight = '10px';
+          
+          // Tilføj checkbox for at vise/skjule sidetal
+          const showPagesCheckbox = document.createElement('input');
+          showPagesCheckbox.type = 'checkbox';
+          showPagesCheckbox.id = `show-pages-${section.id}`;
+          showPagesCheckbox.checked = section.showInToc !== false; // Som standard vises sidetal medmindre eksplicit sat til false
+          
+          // Label til checkbox
+          const checkboxLabel = document.createElement('label');
+          checkboxLabel.htmlFor = `show-pages-${section.id}`;
+          checkboxLabel.textContent = 'Vis sidetal i indholdsfortegnelsen';
+          checkboxLabel.className = 'checkbox-label';
+          
+          // Håndter ændringer i checkbox
+          showPagesCheckbox.addEventListener('change', (e) => {
+            section.showInToc = e.target.checked;
+          });
+          
+          // Tilføj elementer til containeren
+          checkboxContainer.appendChild(sectionTitle);
+          checkboxContainer.appendChild(showPagesCheckbox);
+          checkboxContainer.appendChild(checkboxLabel);
+          sectionDiv.appendChild(checkboxContainer);
+          
+          // Vis antal filer direkte i hovedpunktet
+          if (section.files.length > 0) {
+            const filesList = document.createElement('p');
+            filesList.innerHTML = `<strong>Filer direkte i mappen:</strong> ${section.files.length} fil(er)`;
+            sectionDiv.appendChild(filesList);
+          }
+          
+          // Vis underpunkter
+          if (section.subpoints.length > 0) {
+            const subpointsContainer = document.createElement('div');
+            subpointsContainer.className = 'folder-subpoints';
+            subpointsContainer.style.marginLeft = '20px';
+            
+            section.subpoints.forEach(subpoint => {
+              const subpointDiv = document.createElement('div');
+              subpointDiv.className = 'folder-subpoint';
+              
+              // Tilføj checkbox-container for underpunkt
+              const subCheckboxContainer = document.createElement('div');
+              subCheckboxContainer.className = 'checkbox-container';
+              
+              // Vis underpunktets titel
+              const subpointTitle = document.createElement('h4');
+              subpointTitle.textContent = subpoint.title;
+              subpointTitle.style.margin = '0';
+              subpointTitle.style.marginRight = '10px';
+              
+              // Tilføj checkbox for at vise/skjule sidetal for underpunkt
+              const showSubPagesCheckbox = document.createElement('input');
+              showSubPagesCheckbox.type = 'checkbox';
+              showSubPagesCheckbox.id = `show-pages-${subpoint.id}`;
+              showSubPagesCheckbox.checked = subpoint.showInToc !== false; // Som standard vises sidetal medmindre eksplicit sat til false
+              
+              // Label til checkbox
+              const subCheckboxLabel = document.createElement('label');
+              subCheckboxLabel.htmlFor = `show-pages-${subpoint.id}`;
+              subCheckboxLabel.textContent = 'Vis sidetal i indholdsfortegnelsen';
+              subCheckboxLabel.className = 'checkbox-label';
+              
+              // Håndter ændringer i checkbox
+              showSubPagesCheckbox.addEventListener('change', (e) => {
+                subpoint.showInToc = e.target.checked;
+              });
+              
+              // Tilføj elementer til containeren
+              subCheckboxContainer.appendChild(subpointTitle);
+              subCheckboxContainer.appendChild(showSubPagesCheckbox);
+              subCheckboxContainer.appendChild(subCheckboxLabel);
+              subpointDiv.appendChild(subCheckboxContainer);
+              
+              // Vis antal filer i underpunktet
+              const subFilesList = document.createElement('p');
+              subFilesList.innerHTML = `<strong>Filer i undermappen:</strong> ${subpoint.files.length} fil(er)`;
+              subpointDiv.appendChild(subFilesList);
+              
+              subpointsContainer.appendChild(subpointDiv);
+            });
+            
+            sectionDiv.appendChild(subpointsContainer);
+          }
+          
+          structureContainer.appendChild(sectionDiv);
+        });
+        
+        folderStructurePreview.appendChild(structureContainer);
+      }
+
+      // Funktion der konverterer en JPG-fil til PDF bytes
+      async function jpgFileToPdfBytes(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          
+          reader.onload = async (e) => {
+            try {
+              const { PDFDocument } = PDFLib;
+              const pdfDoc = await PDFDocument.create();
+              
+              // Læs billedet for at få dimensioner
+              const imgDataUrl = e.target.result;
+              const img = new Image();
+              
+              img.onload = async () => {
+                try {
+                  // Få billedets dimensioner
+                  const imgWidth = img.width;
+                  const imgHeight = img.height;
+                  
+                  // Konverter DataURL til ArrayBuffer for pdf-lib
+                  const base64Data = imgDataUrl.split(',')[1];
+                  const jpgBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+                  
+                  // Indlejr JPG i PDF
+                  let jpgImage;
+                  try {
+                    jpgImage = await pdfDoc.embedJpg(jpgBuffer);
+                  } catch (embedError) {
+                    console.error("Kunne ikke indlejre JPG i PDF, returnerer tom PDF:", embedError);
+                    // Fortsæt med en tom PDF i stedet for at fejle helt
+                    const pdfBytes = await pdfDoc.save();
+                    resolve(pdfBytes);
+                    return;
+                  }
+                  
+                  // Tilføj side med billedet
+                  const page = pdfDoc.addPage([imgWidth, imgHeight]);
+                  
+                  // Tegn billedet (med fejlhåndtering)
+                  try {
+                    page.drawImage(jpgImage, {
+                      x: 0,
+                      y: 0,
+                      width: imgWidth,
+                      height: imgHeight
+                    });
+                  } catch (drawError) {
+                    console.error("Kunne ikke tegne JPG på PDF-side:", drawError);
+                    // Fortsæt med en tom side - billedet er allerede tilføjet til dokumentet
+                  }
+                  
+                  // Gem og returner PDF-bytes
+                  const pdfBytes = await pdfDoc.save();
+                  resolve(pdfBytes);
+                } catch (innerError) {
+                  console.error("Fejl under oprettelse af PDF fra JPG:", innerError);
+                  // Forsøg at returnere en tom PDF i stedet for helt at fejle
+                  try {
+                    const emptyPdfDoc = await PDFDocument.create();
+                    emptyPdfDoc.addPage([500, 500]); // Standard side
+                    const emptyPdfBytes = await emptyPdfDoc.save();
+                    resolve(emptyPdfBytes);
+                  } catch (fallbackError) {
+                    reject(fallbackError);
+                  }
+                }
+              };
+              
+              img.onerror = (imgError) => {
+                console.error("Kunne ikke indlæse billede:", imgError);
+                // Returner en tom PDF i stedet for at fejle helt
+                try {
+                  (async () => {
+                    const emptyPdfDoc = await PDFDocument.create();
+                    emptyPdfDoc.addPage([500, 500]); // Standard side
+                    const emptyPdfBytes = await emptyPdfDoc.save();
+                    resolve(emptyPdfBytes);
+                  })();
+                } catch (fallbackError) {
+                  reject(fallbackError);
+                }
+              };
+              
+              // Indlæs billedet fra DataURL
+              img.src = imgDataUrl;
+              
+            } catch (error) {
+              console.error("Fejl i JPG til PDF konvertering:", error);
+              reject(error);
+            }
+          };
+          
+          reader.onerror = (fileError) => {
+            console.error("Kunne ikke læse JPG-fil:", fileError);
+            reject(fileError);
+          };
+          
+          // Læs filen som DataURL
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // Generér samlet PDF
+      document.getElementById('generatePDF').addEventListener('click', async () => {
+        // Deaktiver knap for at undgå dobbeltklik
+        const generateButton = document.getElementById('generatePDF');
+        generateButton.disabled = true;
+        generateButton.textContent = 'Genererer...';
+
+        try {
+          // Sikr at PDFLib og relaterede objekter er tilgængelige
+          if (!PDFLib) {
+            throw new Error("PDF-biblioteket (pdf-lib) kunne ikke indlæses. Genindlæs siden og prøv igen.");
+          }
+          
+          const { PDFDocument, StandardFonts, rgb } = PDFLib;
+          
+          // Opret PDF dokument med fejlhåndtering
+          let mergedPdf;
+          try {
+            mergedPdf = await PDFDocument.create();
+          } catch (createError) {
+            throw new Error("Kunne ikke oprette et nyt PDF-dokument: " + createError.message);
+          }
+          
+          // Tjek om der er uploade mapper/filer
+          if (folderStructure.sections.length === 0) {
+            alert("Ingen mapper uploadet. Upload venligst en mappe med filer først.");
+            generateButton.disabled = false;
+            generateButton.textContent = 'Generér samlet PDF';
+            return;
+          }
+          
+          const tocEntries = [];
+          let currentPageNumber = 0; // Sidetal i den *færdige* PDF (1-baseret for brugeren)
+          let currentPdfPageIndex = 0; // Intern sideindeks (0-baseret)
+          let coverPagesCount = 0;
+          let skipTocGeneration = false; // Flag til at helt at springe TOC over ved fejl
+
+          // Processer forside først
+          const coverFile = document.getElementById('coverInput').files[0];
+          if (coverFile) {
+            const coverBytes = await coverFile.arrayBuffer();
+            const coverPdf = await PDFDocument.load(coverBytes);
+            const coverIndices = coverPdf.getPageIndices();
+            const copiedPages = await mergedPdf.copyPages(coverPdf, coverIndices);
+            copiedPages.forEach(page => mergedPdf.addPage(page));
+            coverPagesCount = copiedPages.length;
+            currentPdfPageIndex += coverPagesCount; // Opdater internt indeks
+          }
+
+          // Reserver plads til TOC (indsæt en blank side)
+          const tocInternalPageIndex = currentPdfPageIndex; // Indeks hvor TOC indsættes
+          
+          try {
+            mergedPdf.insertPage(tocInternalPageIndex);
+            currentPdfPageIndex++; // Tæl TOC-siden med internt
+          } catch (tocPageError) {
+            console.error("Kunne ikke indsætte TOC-side:", tocPageError);
+            skipTocGeneration = true; // Spring helt TOC over hvis vi end ikke kan indsætte en side
+          }
+
+          // Funktion til at tilføje sider fra bytes (både PDF og JPG-konverteret-til-PDF)
+          async function appendPdfBytes(pdfBytes) {
+            try {
+                const donorPdf = await PDFDocument.load(pdfBytes);
+                const copiedPages = await mergedPdf.copyPages(donorPdf, donorPdf.getPageIndices());
+                copiedPages.forEach(page => {
+                  // Tilføj siden *efter* TOC-siden
+                  mergedPdf.addPage(page);
+                  currentPdfPageIndex++; // Opdater internt indeks for hver tilføjet side
+                });
+                return copiedPages.length; // Returner antal tilføjede sider
+            } catch (loadError) {
+                console.error("Error loading/copying pages from PDF bytes:", loadError);
+                alert("Kunne ikke indlæse en af PDF-filerne. Den springes over. Tjek konsollen.");
+                return 0; // Returner 0 sider tilføjet ved fejl
+            }
+          }
+
+          // Juster start sidetal for brugeren (efter forside + TOC)
+          // Hvis TOC sprunget over, skal vi ikke tælle den med i sidenummereringen
+          currentPageNumber = coverPagesCount + (skipTocGeneration ? 0 : 1); // TOC er side coverPagesCount + 1 hvis den er med
+
+          // Processer sektioner og underpunkter fra folderStructure
+          for (const section of folderStructure.sections) {
+            let sectionStartPage = currentPageNumber + 1; // Næste side *efter* den nuværende
+            let sectionPagesAdded = 0;
+
+            // Processer hovedpunktets filer
+            for (const file of section.files) {
+              try {
+                  if (file.type === 'application/pdf') {
+                    const bytes = await file.arrayBuffer();
+                    sectionPagesAdded += await appendPdfBytes(bytes);
+                  } else if (file.type === 'image/jpeg') {
+                    const pdfBytes = await jpgFileToPdfBytes(file);
+                    sectionPagesAdded += await appendPdfBytes(pdfBytes);
+                  } else {
+                    console.warn('Unsupported file type skipped: ' + file.type);
+                  }
+              } catch (fileError) {
+                  console.error(`Error processing file ${file.name} in section '${section.title}':`, fileError);
+                  alert(`Fejl ved behandling af fil ${file.name}. Den springes over.`);
+              }
+            }
+            
+            currentPageNumber += sectionPagesAdded; // Opdater nuværende sidetal
+            let sectionEndPage = sectionStartPage + sectionPagesAdded - 1; // Beregn slutside
+
+            // Tilføj hovedpunkt til TOC kun hvis det har titel eller indhold
+            if (section.title.trim() || sectionPagesAdded > 0) {
+                tocEntries.push({
+                   title: section.title.trim() || 'Uden titel',
+                   startPage: sectionStartPage, // Side hvor sektionen starter
+                   endPage: sectionEndPage, // Side hvor sektionen slutter 
+                   indent: 0,
+                   showPages: section.showInToc !== false // Respekter valget om at vise sidetal
+                });
+            } else if (section.subpoints.length > 0) {
+                // Hvis tomt hovedpunkt men har underpunkter, juster startside for TOC
+                sectionStartPage--; // Start teknisk set hvor forrige sluttede
+            }
+
+            // Processer underpunkter
+            for (const subpoint of section.subpoints) {
+              let subStartPage = currentPageNumber + 1;
+              let subPagesAdded = 0;
+              for (const file of subpoint.files) {
+                 try {
+                    if (file.type === 'application/pdf') {
+                      const bytes = await file.arrayBuffer();
+                      subPagesAdded += await appendPdfBytes(bytes);
+                    } else if (file.type === 'image/jpeg') {
+                      const pdfBytes = await jpgFileToPdfBytes(file);
+                      subPagesAdded += await appendPdfBytes(pdfBytes);
+                    } else {
+                      console.warn('Unsupported file type skipped: ' + file.type);
+                    }
+                 } catch (fileError) {
+                     console.error(`Error processing file ${file.name} in subpoint '${subpoint.title}':`, fileError);
+                     alert(`Fejl ved behandling af fil ${file.name}. Den springes over.`);
+                 }
+              }
+              
+              currentPageNumber += subPagesAdded; // Opdater nuværende sidetal
+              let subEndPage = subStartPage + subPagesAdded - 1; // Beregn slutside
+
+              // Tilføj underpunkt til TOC kun hvis det har titel eller indhold
+              if (subpoint.title.trim() || subPagesAdded > 0) {
+                  tocEntries.push({
+                     title: subpoint.title.trim() || 'Uden titel',
+                     startPage: subStartPage, // Side hvor underpunktet starter
+                     endPage: subEndPage, // Side hvor underpunktet slutter
+                     indent: 20,
+                     showPages: subpoint.showInToc !== false // Respekter valget om at vise sidetal
+                  });
+              }
+            }
+          }
+
+          // --- Byg TOC Siden ---
+          try {
+            if (!skipTocGeneration) { // Kun forsøg at lave TOC hvis vi ikke har valgt at springe det over
+              const tocPage = mergedPdf.getPage(tocInternalPageIndex); // Hent den reserverede side
+              const { width, height } = tocPage.getSize();
+              
+              // Håndter font embedding med fejlhåndtering
+              let font, boldFont;
+              let useFallbackToc = false;
+              
+              try {
+                font = await mergedPdf.embedFont(StandardFonts.Helvetica);
+              } catch (fontError) {
+                console.warn("Kunne ikke indlejre Helvetica font, bruger fallback rendering:", fontError);
+                useFallbackToc = true;
+              }
+              
+              try {
+                boldFont = await mergedPdf.embedFont(StandardFonts.Helvetica_Bold);
+              } catch (fontError) {
+                console.warn("Kunne ikke indlejre Helvetica_Bold font, bruger fallback rendering:", fontError);
+                if (font) {
+                  boldFont = font; // Hvis vi har normal font, brug den som erstatning
+                } else {
+                  useFallbackToc = true;
+                }
+              }
+              
+              const fontSize = 11;
+              const tocTitleFontSize = 16;
+              const lineSpacing = 5; // Ekstra plads mellem linjer
+              const entryHeight = fontSize + lineSpacing;
+              const tocMargin = 50;
+              let currentY = height - tocMargin - tocTitleFontSize; // Start Y for TOC indhold
+
+              // Hvis vi ikke kunne indlejre fonts, generer en simpel TOC-side uden fonts
+              if (useFallbackToc) {
+                // Simpel TOC generering uden font-objekter
+                try {
+                  // Brug standard font (ingen embedFont)
+                  tocPage.drawText('INDHOLDSFORTEGNELSE', {
+                    x: tocMargin,
+                    y: height - tocMargin,
+                    size: tocTitleFontSize,
+                    color: rgb(0, 0, 0),
+                  });
+                  
+                  let yPos = height - tocMargin - tocTitleFontSize - 20;
+                  for (const entry of tocEntries) {
+                    if (yPos < tocMargin) break; // Stop hvis vi løber tør for plads
+                    
+                    const indent = entry.indent;
+                    const titleText = entry.title;
+                    
+                    // Formater sidetal som "side x-y" hvis det skal vises
+                    const formattedPageText = entry.showPages 
+                      ? (entry.startPage === entry.endPage 
+                          ? `side ${entry.startPage}` 
+                          : `side ${entry.startPage}-${entry.endPage}`)
+                      : '';
+                    
+                    // Vis titel (med indrykning for underpunkter)
+                    tocPage.drawText(titleText, {
+                      x: tocMargin + indent,
+                      y: yPos,
+                      size: fontSize,
+                      color: rgb(0, 0, 0),
+                    });
+                    
+                    // Vis kun sidetal hvis det skal vises
+                    if (entry.showPages) {
+                      // Anslå bredden af sidetallet
+                      const estimatedWidth = formattedPageText.length * fontSize * 0.6;
+                      
+                      // Vis sidetal (højrejusteret)
+                      tocPage.drawText(formattedPageText, {
+                        x: Math.max(width - tocMargin - estimatedWidth - 5, width / 2),
+                        y: yPos,
+                        size: fontSize,
+                        color: rgb(0, 0, 0),
+                      });
+                    }
+                    
+                    yPos -= entryHeight;
+                    
+                    // Ekstra mellemrum efter hovedpunkter med underpunkter
+                    const currentIndex = tocEntries.indexOf(entry);
+                    if (entry.indent === 0 && currentIndex < tocEntries.length - 1 && tocEntries[currentIndex + 1].indent > 0) {
+                      yPos -= lineSpacing;
+                    }
+                  }
+                } catch (fallbackError) {
+                  console.error("Fallback TOC fejlede også:", fallbackError);
+                  // Fortsæt uden TOC hvis alt fejler
+                }
+              } else {
+                // Normal TOC generering med fonts
+                // TOC Titel
+                tocPage.drawText('INDHOLDSFORTEGNELSE', {
+                  x: tocMargin,
+                  y: currentY + entryHeight, // Lidt højere start for titlen
+                  font: boldFont, // Vil bruge standard system font hvis undefined
+                  size: tocTitleFontSize,
+                  color: rgb(0, 0, 0),
+                });
+                currentY -= entryHeight * 1.5; // Ekstra plads efter titel
+
+                // TOC Entries
+                for (const entry of tocEntries) {
+                  if (currentY < tocMargin) {
+                    console.warn("TOC fylder mere end én side - resterende poster vises ikke.");
+                    // Her kunne man indsætte logik til at tilføje en ny TOC-side
+                    break;
+                  }
+
+                  const text = entry.title;
+                  
+                  // Formater sidetal som "side x-y" hvis det skal vises
+                  const formattedPageText = entry.showPages 
+                    ? (entry.startPage === entry.endPage 
+                        ? `side ${entry.startPage}` 
+                        : `side ${entry.startPage}-${entry.endPage}`)
+                    : '';
+                  
+                  // Håndter bredde-beregning sikkert (med eller uden font-objekt)
+                  let textWidth = 0;
+                  let pageNumWidth = 0;
+                  
+                  if (font) {
+                    try {
+                      textWidth = font.widthOfTextAtSize(text, fontSize);
+                      if (entry.showPages) {
+                        pageNumWidth = font.widthOfTextAtSize(formattedPageText, fontSize);
+                      }
+                    } catch (widthError) {
+                      console.warn("Fejl ved beregning af tekstbredde:", widthError);
+                      // Estimér bredden simpelt (ca. 0.6*fontSize pr tegn i gennemsnit)
+                      textWidth = text.length * fontSize * 0.6;
+                      if (entry.showPages) {
+                        pageNumWidth = formattedPageText.length * fontSize * 0.6;
+                      }
+                    }
+                  } else {
+                    // Simpel estimering hvis vi ikke har font-objektet
+                    textWidth = text.length * fontSize * 0.6;
+                    if (entry.showPages) {
+                      pageNumWidth = formattedPageText.length * fontSize * 0.6;
+                    }
+                  }
+                  
+                  const availableWidth = width - tocMargin * 2 - entry.indent - (entry.showPages ? pageNumWidth + 10 : 0); // Plads til titel (-10 for lidt luft)
+
+                  // Simpel linjeombrydning (kan forbedres)
+                  let lines = [text];
+                  if (textWidth > availableWidth && font) {
+                      // Primitiv ombrydning - søg baglæns efter mellemrum
+                      lines = [];
+                      let currentLine = text;
+                      try {
+                        while(font.widthOfTextAtSize(currentLine, fontSize) > availableWidth && currentLine.length > 0) {
+                            let breakPoint = currentLine.lastIndexOf(' ', Math.floor(currentLine.length * availableWidth / font.widthOfTextAtSize(currentLine, fontSize)));
+                            if (breakPoint <= 0) breakPoint = currentLine.lastIndexOf(' '); // Find sidste mellemrum hvis estimat fejler
+                            if (breakPoint > 0) {
+                                lines.push(currentLine.substring(0, breakPoint));
+                                currentLine = currentLine.substring(breakPoint + 1);
+                            } else {
+                                // Ordet er for langt, bryd det hårdt (eller lad det flyde over)
+                                lines.push(currentLine);
+                                currentLine = "";
+                            }
+                        }
+                      } catch (wrapError) {
+                        console.warn("Fejl ved linjeombrydning, viser tekst på én linje:", wrapError);
+                        lines = [text]; // Fald tilbage til én linje
+                        currentLine = "";
+                      }
+                      
+                      if (currentLine) lines.push(currentLine);
+                  } else if (textWidth > availableWidth) {
+                      // Simpel ombrydning uden font-objekt (baseret på estimeret tegn pr. linje)
+                      const charsPerLine = Math.floor(availableWidth / (fontSize * 0.6));
+                      lines = [];
+                      for (let i = 0; i < text.length; i += charsPerLine) {
+                        lines.push(text.substring(i, Math.min(i + charsPerLine, text.length)));
+                      }
+                  }
+
+                  // Tegn linjer for titlen
+                  lines.forEach((line, index) => {
+                       if (currentY < tocMargin) return; // Stop hvis vi løber tør for plads midt i en post
+                       tocPage.drawText(line, {
+                          x: tocMargin + entry.indent,
+                          y: currentY,
+                          font: font, // Vil bruge standard system font hvis undefined
+                          size: fontSize,
+                          color: rgb(0, 0, 0),
+                       });
+                       if(index < lines.length -1) { // Flyt kun ned hvis der er flere linjer
+                            currentY -= entryHeight;
+                       }
+                  });
+
+                  // Tegn sidetal på samme linje som *første* linje af titlen - kun hvis de skal vises
+                  if (entry.showPages) {
+                    tocPage.drawText(formattedPageText, {
+                        x: Math.max(width - tocMargin - pageNumWidth - 5, width / 2), // Højrejuster sidetal, men sikr det ikke bliver for langt til venstre
+                        y: currentY + (lines.length -1) * entryHeight, // Juster Y tilbage til første linje
+                        font: font, // Vil bruge standard system font hvis undefined
+                        size: fontSize,
+                        color: rgb(0, 0, 0),
+                    });
+                  }
+
+                  currentY -= entryHeight; // Flyt ned til næste post
+
+                   // Ekstra mellemrum efter hovedpunkter med underpunkter
+                   const currentIndex = tocEntries.indexOf(entry);
+                   if (entry.indent === 0 && currentIndex < tocEntries.length - 1 && tocEntries[currentIndex + 1].indent > 0) {
+                      currentY -= lineSpacing;
+                   }
+                }
+              }
+            } else {
+              console.log("TOC-generering er sprunget over pga. tidligere fejl");
+            }
+          } catch (tocError) {
+            console.error("Fejl ved generering af TOC, fortsætter uden indholdsfortegnelse:", tocError);
+            // Vi fortsætter uden TOC hvis der er fejl - bedre at få PDF'en uden TOC end slet ingen PDF
+          }
+
+          // Hvis TOC er sprunget helt over, fjerner vi den tomme side før vi genererer den endelige PDF
+          if (skipTocGeneration) {
+            try {
+              // Forsøg at fjerne den reserverede TOC-side
+              mergedPdf.removePage(tocInternalPageIndex);
+              console.log("Fjernede tom TOC-side");
+            } catch (removeError) {
+              console.error("Kunne ikke fjerne tom TOC-side:", removeError);
+              // Fortsæt alligevel - vi får PDF'en med en tom side, hvilket er bedre end ingen PDF
+            }
+          }
+
+          // Gem og download
+          const mergedPdfBytes = await mergedPdf.save();
+          const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          let pdfName = document.getElementById('pdfNameInput').value.trim() || 'samlet';
+          if (!pdfName.toLowerCase().endsWith('.pdf')) {
+            pdfName += '.pdf';
+          }
+          a.href = url;
+          a.download = pdfName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+        } catch (err) {
+          console.error('Fejl under PDF generering:', err);
+          alert('Der opstod en fejl under genereringen af PDF\'en. Tjek konsollen for detaljer. Fejl: ' + err.message);
+        } finally {
+             // Genaktiver knappen
+             generateButton.disabled = false;
+             generateButton.textContent = 'Generér samlet PDF';
+        }
+      });
+
+      // Tilføj global fejlhåndtering for ikke-håndterede Promise-fejl
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error('Ikke-håndteret promise-fejl:', event.reason);
+        
+        // Genaktiver eventuelle deaktiverede knapper
+        const generateButton = document.getElementById('generatePDF');
+        if (generateButton && generateButton.disabled) {
+          generateButton.disabled = false;
+          generateButton.textContent = 'Generér samlet PDF';
+        }
+      });
+
+    </script>
+  </div>
+</body>
+</html>
