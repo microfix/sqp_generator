@@ -1,0 +1,254 @@
+import { FolderStructureType } from "./types";
+import { PDFDocument, StandardFonts, rgb, PDFPage } from "pdf-lib";
+
+// Function to generate a unique ID
+export const generateId = (): string => '_' + Math.random().toString(36).substr(2, 9);
+
+// Function to process uploaded files into a structured format
+export const processUploadedFiles = (files: File[]): FolderStructureType => {
+  const folderStructure: FolderStructureType = { sections: [] };
+  const pathMap = new Map();
+  
+  // Sort files by path to ensure consistent processing
+  files.sort((a, b) => {
+    // @ts-ignore - webkitRelativePath exists but is not in TypeScript definitions
+    return a.webkitRelativePath.localeCompare(b.webkitRelativePath);
+  });
+  
+  // Process each file
+  files.forEach(file => {
+    // @ts-ignore - webkitRelativePath exists but is not in TypeScript definitions
+    const path = file.webkitRelativePath;
+    const pathParts = path.split('/');
+    
+    // Only accept PDF and JPEG files
+    if (!file.type.match('application/pdf') && !file.type.match('image/jpeg')) {
+      console.warn(`File ignored (not PDF/JPEG): ${path}`);
+      return;
+    }
+    
+    // We only need maximum two levels (main point/subpoint)
+    if (pathParts.length > 1) {
+      const topLevelFolder = pathParts[0];
+      const secondLevelFolder = pathParts.length > 2 ? pathParts[1] : null;
+      
+      // Create main point if it doesn't exist
+      if (!pathMap.has(topLevelFolder)) {
+        const sectionId = generateId();
+        const section = {
+          id: sectionId,
+          title: topLevelFolder,
+          files: [],
+          subpoints: [],
+          showInToc: true
+        };
+        folderStructure.sections.push(section);
+        pathMap.set(topLevelFolder, section);
+      }
+      
+      const section = pathMap.get(topLevelFolder);
+      
+      // If there's a subfolder, create the subpoint
+      if (secondLevelFolder && pathParts.length > 2) {
+        const subpointKey = `${topLevelFolder}/${secondLevelFolder}`;
+        
+        if (!pathMap.has(subpointKey)) {
+          const subpointId = generateId();
+          const subpoint = {
+            id: subpointId,
+            title: secondLevelFolder,
+            files: [],
+            showInToc: true
+          };
+          section.subpoints.push(subpoint);
+          pathMap.set(subpointKey, subpoint);
+        }
+        
+        // Add the file to the subpoint
+        if (pathParts.length > 2) {
+          pathMap.get(subpointKey).files.push(file);
+        }
+      } 
+      // If the file is directly in the main folder (no subfolder)
+      else if (pathParts.length == 2) {
+        section.files.push(file);
+      }
+    }
+  });
+  
+  // Sort sections and subsections alphabetically
+  folderStructure.sections.sort((a, b) => a.title.localeCompare(b.title));
+  folderStructure.sections.forEach(section => {
+    section.subpoints.sort((a, b) => a.title.localeCompare(b.title));
+  });
+  
+  return folderStructure;
+};
+
+// Function to read a file as an ArrayBuffer
+const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+};
+
+// Function to convert JPEG to PDF page
+const convertJpegToPdfPage = async (jpegFile: File, pdfDoc: PDFDocument): Promise<PDFPage> => {
+  const imageBytes = await readFileAsArrayBuffer(jpegFile);
+  const image = await pdfDoc.embedJpg(new Uint8Array(imageBytes));
+  const imageDims = image.scale(1);
+  
+  // Create a page with the same dimensions as the image
+  const page = pdfDoc.addPage([imageDims.width, imageDims.height]);
+  
+  // Draw the image to fill the page
+  page.drawImage(image, {
+    x: 0,
+    y: 0,
+    width: imageDims.width,
+    height: imageDims.height,
+  });
+  
+  return page;
+};
+
+// Main function to generate the combined PDF
+export const generatePDF = async (
+  coverFile: File | null,
+  folderStructure: FolderStructureType,
+  outputName: string
+): Promise<void> => {
+  try {
+    // Create a new PDF document
+    const pdfDoc = await PDFDocument.create();
+    
+    // Embed the standard font for TOC
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    // Track page numbers for TOC creation
+    let currentPage = 0;
+    const tocEntries: { title: string, page: number, level: number, showPage: boolean }[] = [];
+    
+    // Add cover page if available
+    if (coverFile) {
+      const coverBytes = await readFileAsArrayBuffer(coverFile);
+      const coverPdf = await PDFDocument.load(new Uint8Array(coverBytes));
+      const coverPages = await pdfDoc.copyPages(coverPdf, coverPdf.getPageIndices());
+      coverPages.forEach(page => pdfDoc.addPage(page));
+      currentPage += coverPages.length;
+    }
+    
+    // Create TOC placeholder (we'll fill this later)
+    let tocPage = pdfDoc.addPage();
+    const tocStartPage = currentPage;
+    currentPage++;
+    
+    // Process each section and its files/subpoints
+    for (const section of folderStructure.sections) {
+      const sectionStartPage = currentPage;
+      tocEntries.push({ 
+        title: section.title, 
+        page: sectionStartPage, 
+        level: 0, 
+        showPage: section.showInToc 
+      });
+      
+      // Add files directly in the section
+      for (const file of section.files) {
+        if (file.type === 'application/pdf') {
+          const fileBytes = await readFileAsArrayBuffer(file);
+          const pdf = await PDFDocument.load(new Uint8Array(fileBytes));
+          const pages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
+          pages.forEach(page => pdfDoc.addPage(page));
+          currentPage += pages.length;
+        } else if (file.type === 'image/jpeg') {
+          await convertJpegToPdfPage(file, pdfDoc);
+          currentPage++;
+        }
+      }
+      
+      // Process subpoints
+      for (const subpoint of section.subpoints) {
+        const subpointStartPage = currentPage;
+        tocEntries.push({ 
+          title: subpoint.title, 
+          page: subpointStartPage, 
+          level: 1, 
+          showPage: subpoint.showInToc 
+        });
+        
+        // Add files in the subpoint
+        for (const file of subpoint.files) {
+          if (file.type === 'application/pdf') {
+            const fileBytes = await readFileAsArrayBuffer(file);
+            const pdf = await PDFDocument.load(new Uint8Array(fileBytes));
+            const pages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
+            pages.forEach(page => pdfDoc.addPage(page));
+            currentPage += pages.length;
+          } else if (file.type === 'image/jpeg') {
+            await convertJpegToPdfPage(file, pdfDoc);
+            currentPage++;
+          }
+        }
+      }
+    }
+    
+    // Fill in the TOC page
+    const { width, height } = tocPage.getSize();
+    tocPage.drawText('Indholdsfortegnelse', {
+      x: 50,
+      y: height - 50,
+      size: 18,
+      font: boldFont,
+      color: rgb(0, 0, 0),
+    });
+    
+    // Draw TOC entries
+    let yPosition = height - 80;
+    for (const entry of tocEntries) {
+      if (yPosition < 50) {
+        // Add a new TOC page if we've run out of space
+        tocPage = pdfDoc.addPage();
+        yPosition = height - 50;
+        currentPage++;
+      }
+      
+      const indent = entry.level * 20;
+      const entryText = entry.showPage 
+        ? `${entry.title}${'.'.repeat(Math.max(0, 50 - entry.title.length - indent))}${entry.page + 1}`
+        : entry.title;
+      
+      tocPage.drawText(entryText, {
+        x: 50 + indent,
+        y: yPosition,
+        size: 12,
+        font: entry.level === 0 ? boldFont : font,
+        color: rgb(0, 0, 0),
+      });
+      
+      yPosition -= 20;
+    }
+    
+    // Create PDF bytes and trigger download
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create a download link and trigger it
+    const downloadLink = document.createElement('a');
+    downloadLink.href = url;
+    downloadLink.download = `${outputName}.pdf`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    URL.revokeObjectURL(url);
+    
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    throw error;
+  }
+};

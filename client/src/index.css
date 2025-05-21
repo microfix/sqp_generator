@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-1: #000000;
+  --primary-2: #ffffff;
+  --accent-1: #eb50c1;
+  --accent-2: #ef8e34;
+  --glass: rgba(0, 0, 0, 0.9);
+  --shadow: 0 8px 32px rgba(235, 80, 193, 0.2);
+  
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --popover: 0 0% 0%;
+  --popover-foreground: 0 0% 100%;
+  --card: 0 0% 0%;
+  --card-foreground: 0 0% 100%;
+  --border: 0 0% 100%;
+  --input: 240 3.7% 15.9%;
+  --primary: 207 90% 54%;
+  --primary-foreground: 211 100% 99%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --accent: 327 82% 62%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 340 82% 60%;
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans bg-primary-1 text-primary-2;
+    font-family: 'Anton', sans-serif;
+    letter-spacing: 0.05em;
+  }
+
+  .bg-glass {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+  }
+
+  .shadow-custom {
+    box-shadow: var(--shadow);
+  }
+
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+}
+
+@layer components {
+  .gradient-btn {
+    @apply bg-gradient-to-br from-accent-1 to-accent-2 
+           border-2 border-primary-2 
+           rounded-lg font-bold
+           shadow-md text-shadow
+           transition-transform duration-200
+           hover:translate-y-[-1px];
+  }
+
+  .btn-clear {
+    @apply bg-gradient-to-br from-accent-1 to-accent-2 
+           px-4 py-2 rounded-md text-sm
+           border-2 border-primary-2 shadow-md 
+           text-shadow hover:translate-y-[-1px] 
+           transition-transform duration-200;
+  }
+
+  .folder-section {
+    @apply p-4 rounded-md border border-accent-1 
+           bg-black bg-opacity-70 
+           hover:translate-x-1 transition-transform duration-200;
+  }
+
+  .folder-subpoint {
+    @apply p-3 rounded-md border-l-4 border-accent-2 
+           bg-black bg-opacity-70;
+  }
+
+  input[type="text"],
+  input[type="file"] {
+    @apply p-2 rounded-md bg-opacity-10 bg-white 
+           border border-accent-1 text-primary-2;
+  }
+}
