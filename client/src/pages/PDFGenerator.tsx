@@ -16,10 +16,45 @@ export default function PDFGenerator() {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [documentNumberLeft, setDocumentNumberLeft] = useState<string>("");
   const [documentNumberCenter, setDocumentNumberCenter] = useState<string>("");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   
   const coverInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  
+  // Query to fetch all building projects from the database
+  const { data: buildingProjects, isLoading, refetch } = useQuery({
+    queryKey: ['building-projects'],
+    queryFn: async () => {
+      const response = await fetch('/api/building-projects');
+      if (!response.ok) {
+        throw new Error('Failed to fetch building projects');
+      }
+      return response.json() as Promise<BuildingProject[]>;
+    }
+  });
+  
+  // Handle selecting a building project from the dropdown
+  const handleProjectChange = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    
+    if (projectId === "none") {
+      // Reset fields if "Vælg anlæg" is selected
+      setPdfName("samlet");
+      setDocumentNumberLeft("");
+      setDocumentNumberCenter("");
+      return;
+    }
+    
+    // Find the selected project
+    const selectedProject = buildingProjects?.find(p => p.id.toString() === projectId);
+    if (selectedProject) {
+      // Fill in the form with project data
+      setPdfName(selectedProject.pdfName);
+      setDocumentNumberLeft(selectedProject.documentNumberLeft);
+      setDocumentNumberCenter(selectedProject.documentNumberCenter);
+    }
+  };
 
   const handleCoverFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -198,6 +233,30 @@ export default function PDFGenerator() {
         />
         
         <hr className="border-accent-1 my-6" />
+        
+        {/* Building Project Selection */}
+        <div className="mb-6">
+          <label className="block mb-2 font-bold flex items-center">
+            <Building className="w-5 h-5 mr-2" />
+            Vælg anlæg:
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={selectedProjectId} onValueChange={handleProjectChange}>
+              <SelectTrigger className="bg-opacity-10 bg-white border-accent-1 flex-grow">
+                <SelectValue placeholder="Vælg et anlægsnummer" />
+              </SelectTrigger>
+              <SelectContent className="bg-black border border-accent-1">
+                <SelectItem value="none">Vælg anlæg...</SelectItem>
+                {buildingProjects?.map((project) => (
+                  <SelectItem key={project.id} value={project.id.toString()}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <BuildingProjectDialog onProjectAdded={refetch} />
+          </div>
+        </div>
         
         {/* PDF Name Input */}
         <div className="mb-6">

@@ -6,8 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { BuildingProject } from "@shared/schema";
+import type { BuildingProject } from "@shared/schema";
 
 interface BuildingProjectDialogProps {
   onProjectAdded: () => void;
@@ -53,7 +52,7 @@ export function BuildingProjectDialog({ onProjectAdded }: BuildingProjectDialogP
         documentNumberCenter
       };
       
-      await apiRequest<BuildingProject>("/api/building-projects", {
+      await fetch("/api/building-projects", {
         method: "POST",
         body: JSON.stringify(newProject),
         headers: {
