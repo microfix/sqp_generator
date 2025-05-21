@@ -52,13 +52,17 @@ export function BuildingProjectDialog({ onProjectAdded }: BuildingProjectDialogP
         documentNumberCenter
       };
       
-      await fetch("/api/building-projects", {
+      const response = await fetch("/api/building-projects", {
         method: "POST",
         body: JSON.stringify(newProject),
         headers: {
           "Content-Type": "application/json"
         }
       });
+      
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
       
       toast({
         title: "Anlæg oprettet",
