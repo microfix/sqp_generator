@@ -24,6 +24,109 @@ export function HelpDialog() {
         </DialogHeader>
         
         <div className="space-y-6 mt-4 max-h-[70vh] overflow-y-auto pr-2">
+          <section className="bg-black bg-opacity-50 p-4 rounded-lg border border-accent-1">
+            <h3 className="text-2xl font-bold mb-4 text-center text-accent-1">
+              Generering af samlet SQP-rapport – Trin for trin
+            </h3>
+            
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-lg font-bold mb-2 border-b border-accent-1 pb-1">
+                  🔹 Trin 1 – Hent data fra Dalux og organiser i mapper
+                </h4>
+                <ol className="list-decimal ml-6 space-y-2">
+                  <li>Gå ind i Dalux og hent alle relevante rapporter fra:
+                    <ul className="list-disc ml-6 mt-1">
+                      <li>Field</li>
+                      <li>Kontrolplaner</li>
+                      <li>VE</li>
+                      <li>KS Ventilation</li>
+                    </ul>
+                  </li>
+                  <li>Filtrér på anlægsnavnet (fx "Anlæg 3.04").</li>
+                  <li>Hent alle rapporter for det pågældende punkt – fx:
+                    <ul className="list-disc ml-6 mt-1">
+                      <li>Spjæld</li>
+                      <li>Kanalsystem</li>
+                      <li>Tæthedsprøvning</li>
+                    </ul>
+                  </li>
+                  <li>Opret en mappe med præcis det navn som punktet (fx 3.04 spjæld, brandspjæld og volustater).</li>
+                  <li>Læg alle rapporter for punktet i den relevante mappe.</li>
+                  <li>Gentag for alle andre punkter på samme måde – så du ender med flere navngivne mapper.</li>
+                </ol>
+              </div>
+              
+              <div>
+                <h4 className="text-lg font-bold mb-2 border-b border-accent-1 pb-1">
+                  🔹 Trin 2 – Redigér forside (PDF)
+                </h4>
+                <ol className="list-decimal ml-6 space-y-2">
+                  <li>Find den forside, der blev sendt til modtageren (på mail).</li>
+                  <li>Redigér den med:
+                    <ul className="list-disc ml-6 mt-1">
+                      <li>Dags dato</li>
+                      <li>Anlægsnavn</li>
+                    </ul>
+                  </li>
+                  <li>Gem den som PDF.</li>
+                </ol>
+              </div>
+              
+              <div>
+                <h4 className="text-lg font-bold mb-2 border-b border-accent-1 pb-1">
+                  🔹 Trin 3 – Upload til webappen
+                </h4>
+                <ol className="list-decimal ml-6 space-y-2">
+                  <li>Åbn webappen.</li>
+                  <li>Upload den redigerede forside under: "Upload forside (PDF):"</li>
+                  <li>Upload alle de mapper du har lavet under: "Upload mappe med punkter:"</li>
+                  <li>Vælg anlægsnavnet under: "Vælg anlæg"</li>
+                  <li>❗ Hvis anlægsnavnet ikke findes:
+                    <ul className="list-disc ml-6 mt-1">
+                      <li>Tryk på "+ Tilfør nyt anlæg"</li>
+                      <li>Udfyld med:
+                        <ul className="list-disc ml-6 mt-1">
+                          <li>Navn</li>
+                          <li>Dokumentnummer 1</li>
+                          <li>Dokumentnummer 2</li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ol>
+              </div>
+              
+              <div>
+                <h4 className="text-lg font-bold mb-2 border-b border-accent-1 pb-1">
+                  🔹 Trin 4 – Generér den samlede PDF
+                </h4>
+                <ol className="list-decimal ml-6 space-y-2">
+                  <li>Tryk på "Generer samlet PDF"</li>
+                  <li>Download den samlede SQP-rapport til det valgte anlæg.</li>
+                </ol>
+              </div>
+              
+              <div>
+                <h4 className="text-lg font-bold mb-2 border-b border-accent-1 pb-1">
+                  🔹 Trin 5 – Kvalitetskontrol
+                </h4>
+                <ol className="list-decimal ml-6 space-y-2">
+                  <li>Åbn den downloadede PDF.</li>
+                  <li>Brug søgefunktionen og søg efter teksten: "ej ok"</li>
+                  <li>Der må ikke være nogen resultater.</li>
+                  <li>❌ Hvis der er "ej ok" nogen steder:
+                    <ul className="list-disc ml-6 mt-1">
+                      <li>Kontakt Simone på smi@sdplus.dk</li>
+                    </ul>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </section>
+          
+          <hr className="border-accent-1 my-6" />
+          
           <section>
             <h3 className="text-xl font-bold mb-2 flex items-center">
               <Database className="w-5 h-5 mr-2 text-accent-1" />
