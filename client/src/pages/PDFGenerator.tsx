@@ -5,6 +5,7 @@ import { generatePDF, processUploadedFiles } from "@/lib/pdfUtils";
 import { FileText, Folder, File, FileOutput, Building } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BuildingProjectDialog } from "@/components/BuildingProjectDialog";
+import { EditBuildingProjectDialog } from "@/components/EditBuildingProjectDialog";
 import { useQuery } from "@tanstack/react-query";
 import { BuildingProject } from "@shared/schema";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -255,6 +256,14 @@ export default function PDFGenerator() {
               </SelectContent>
             </Select>
             <BuildingProjectDialog onProjectAdded={refetch} />
+            
+            {/* Show Edit button only when a project is selected */}
+            {selectedProjectId && selectedProjectId !== "none" && buildingProjects && (
+              <EditBuildingProjectDialog 
+                project={buildingProjects.find(p => p.id.toString() === selectedProjectId)!} 
+                onProjectUpdated={refetch} 
+              />
+            )}
           </div>
         </div>
         
