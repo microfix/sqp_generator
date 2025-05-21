@@ -119,7 +119,9 @@ const convertJpegToPdfPage = async (jpegFile: File, pdfDoc: PDFDocument): Promis
 export const generatePDF = async (
   coverFile: File | null,
   folderStructure: FolderStructureType,
-  outputName: string
+  outputName: string,
+  documentNumberLeft: string = "",
+  documentNumberCenter: string = ""
 ): Promise<void> => {
   try {
     // Create a new PDF document
@@ -236,7 +238,7 @@ export const generatePDF = async (
       yPosition -= 20;
     }
     
-    // Add page numbers to all pages
+    // Add page numbers to all pages and document numbers in header
     for (let i = 0; i < pdfDoc.getPageCount(); i++) {
       const page = pdfDoc.getPage(i);
       const { width, height } = page.getSize();
@@ -251,6 +253,29 @@ export const generatePDF = async (
         font: font,
         color: rgb(0, 0, 0),
       });
+      
+      // Add document number in left header if provided
+      if (documentNumberLeft) {
+        page.drawText(documentNumberLeft, {
+          x: 50, // Left margin
+          y: height - 30, // Top margin
+          size: 10,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
+      }
+      
+      // Add document number in center header if provided
+      if (documentNumberCenter) {
+        const textWidth = font.widthOfTextAtSize(documentNumberCenter, 10);
+        page.drawText(documentNumberCenter, {
+          x: (width - textWidth) / 2, // Center position
+          y: height - 30, // Top margin
+          size: 10,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
+      }
     }
     
     // Create PDF bytes and trigger download

@@ -10,6 +10,8 @@ export default function PDFGenerator() {
   const [folderStructure, setFolderStructure] = useState<FolderStructureType>({ sections: [] });
   const [pdfName, setPdfName] = useState<string>("samlet");
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [documentNumberLeft, setDocumentNumberLeft] = useState<string>("");
+  const [documentNumberCenter, setDocumentNumberCenter] = useState<string>("");
   
   const coverInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -65,7 +67,13 @@ export default function PDFGenerator() {
 
     setIsGenerating(true);
     try {
-      await generatePDF(coverFile, folderStructure, pdfName);
+      await generatePDF(
+        coverFile, 
+        folderStructure, 
+        pdfName, 
+        documentNumberLeft,
+        documentNumberCenter
+      );
       toast({
         title: "PDF genereret",
         description: `${pdfName}.pdf er nu klar til download.`,
@@ -200,6 +208,41 @@ export default function PDFGenerator() {
             onChange={(e) => setPdfName(e.target.value)}
             className="p-2 rounded-md w-full bg-opacity-10 bg-white border border-accent-1" 
           />
+        </div>
+        
+        {/* Document Number Inputs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Left Document Number */}
+          <div>
+            <label htmlFor="documentNumberLeft" className="block mb-2 font-bold flex items-center">
+              <File className="w-5 h-5 mr-2" />
+              Dokumentnummer (venstre side):
+            </label>
+            <input 
+              type="text" 
+              id="documentNumberLeft" 
+              value={documentNumberLeft}
+              onChange={(e) => setDocumentNumberLeft(e.target.value)}
+              className="p-2 rounded-md w-full bg-opacity-10 bg-white border border-accent-1" 
+              placeholder="Vises i toppen til venstre"
+            />
+          </div>
+          
+          {/* Center Document Number */}
+          <div>
+            <label htmlFor="documentNumberCenter" className="block mb-2 font-bold flex items-center">
+              <File className="w-5 h-5 mr-2" />
+              Dokumentnummer (centreret):
+            </label>
+            <input 
+              type="text" 
+              id="documentNumberCenter" 
+              value={documentNumberCenter}
+              onChange={(e) => setDocumentNumberCenter(e.target.value)}
+              className="p-2 rounded-md w-full bg-opacity-10 bg-white border border-accent-1" 
+              placeholder="Vises i toppen i midten"
+            />
+          </div>
         </div>
         
         {/* Generate Button */}
