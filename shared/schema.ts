@@ -15,3 +15,22 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// Building projects table (anlæg)
+export const buildingProjects = pgTable("building_projects", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  pdfName: text("pdf_name").notNull(),
+  documentNumberLeft: text("document_number_left").notNull(),
+  documentNumberCenter: text("document_number_center").notNull(),
+});
+
+export const insertBuildingProjectSchema = createInsertSchema(buildingProjects).pick({
+  name: true,
+  pdfName: true,
+  documentNumberLeft: true,
+  documentNumberCenter: true,
+});
+
+export type InsertBuildingProject = z.infer<typeof insertBuildingProjectSchema>;
+export type BuildingProject = typeof buildingProjects.$inferSelect;

@@ -1,9 +1,13 @@
-import { useState, useRef, ChangeEvent } from "react";
+import { useState, useRef, ChangeEvent, useEffect } from "react";
 import { FolderStructure } from "@/components/pdf/FolderStructure";
 import { FolderData, FolderStructureType } from "@/lib/types";
 import { generatePDF, processUploadedFiles } from "@/lib/pdfUtils";
-import { FileText, Folder, File, FileOutput } from "lucide-react";
+import { FileText, Folder, File, FileOutput, Building } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { BuildingProjectDialog } from "@/components/BuildingProjectDialog";
+import { useQuery } from "@tanstack/react-query";
+import { BuildingProject } from "@shared/schema";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 export default function PDFGenerator() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
