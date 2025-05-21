@@ -197,6 +197,9 @@ export const generatePDF = async (
       }
     }
     
+    // Calculate total number of pages
+    const totalPages = pdfDoc.getPageCount();
+    
     // Fill in the TOC page
     const { width, height } = tocPage.getSize();
     tocPage.drawText('Indholdsfortegnelse', {
@@ -231,6 +234,23 @@ export const generatePDF = async (
       });
       
       yPosition -= 20;
+    }
+    
+    // Add page numbers to all pages
+    for (let i = 0; i < pdfDoc.getPageCount(); i++) {
+      const page = pdfDoc.getPage(i);
+      const { width, height } = page.getSize();
+      
+      // Format: "Page X of Y" at bottom left
+      const pageText = `Page ${i + 1} of ${totalPages}`;
+      
+      page.drawText(pageText, {
+        x: 50, // Left margin
+        y: 30, // Bottom margin
+        size: 10,
+        font: font,
+        color: rgb(0, 0, 0),
+      });
     }
     
     // Create PDF bytes and trigger download
