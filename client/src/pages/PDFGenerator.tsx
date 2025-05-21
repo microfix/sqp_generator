@@ -6,6 +6,7 @@ import { FileText, Folder, File, FileOutput, Building } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BuildingProjectDialog } from "@/components/BuildingProjectDialog";
 import { EditBuildingProjectDialog } from "@/components/EditBuildingProjectDialog";
+import { HelpDialog } from "@/components/HelpDialog";
 import { useQuery } from "@tanstack/react-query";
 import { BuildingProject } from "@shared/schema";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -165,7 +166,10 @@ export default function PDFGenerator() {
   return (
     <div className="min-h-screen bg-primary-1 text-primary-2 p-4 md:p-8 font-anton">
       <div className="max-w-5xl mx-auto bg-glass backdrop-blur-md rounded-xl border border-opacity-30 border-primary-2 p-6 md:p-10 shadow-custom">
-        <h1 className="text-3xl md:text-4xl text-center mb-8">PDF Generator KS</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl md:text-4xl">PDF Generator KS</h1>
+          <HelpDialog />
+        </div>
         
         {/* Cover Upload Section */}
         <div className="mb-6">
