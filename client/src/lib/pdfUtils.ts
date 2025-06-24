@@ -223,59 +223,71 @@ export const generatePDF = async (
     let currentPage = 0;
     const tocEntries: { title: string, page: number, level: number, showPage: boolean }[] = [];
     
-    // Add cover page if available and fill form fields
-    if (coverFile) {
-      const coverBytes = await readFileAsArrayBuffer(coverFile);
-      const coverPdf = await PDFDocument.load(new Uint8Array(coverBytes));
-      
-      // Try to fill form fields in the cover page
-      try {
-        const form = coverPdf.getForm();
+    // Step 1: Add standard cover page from server
+    try {
+      const standardCoverResponse = await fetch('/standard_forside.pdf');
+      if (standardCoverResponse.ok) {
+        const standardCoverArrayBuffer = await standardCoverResponse.arrayBuffer();
+        const standardCoverPdf = await PDFDocument.load(standardCoverArrayBuffer);
         
-        // Get current date in format YYYY.MM.DD
-        const currentDate = new Date();
-        const day = currentDate.getDate().toString().padStart(2, '0');
-        const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
-        const year = currentDate.getFullYear();
-        const dateString = `${year}.${month}.${day}`;
-        
-        // Get unit name (PDF name without " SQP")
-        const unitName = outputName.replace(/ SQP$/, '');
-        
-        // Fill the form fields
+        // Fill form fields in standard cover if they exist
+        const form = standardCoverPdf.getForm();
         const fields = form.getFields();
-        console.log('Found form fields:', fields.map(f => f.getName()));
-        console.log('Looking for fields: unitname, date');
-        console.log('Will fill unitname with:', unitName);
-        console.log('Will fill date with:', dateString);
         
-        fields.forEach(field => {
-          const fieldName = field.getName();
-          console.log(`Processing field: ${fieldName}`);
-          if (fieldName === 'unitname') {
-            const textField = form.getTextField('unitname');
-            textField.setText(unitName);
-            textField.setAlignment(1); // 0 = left, 1 = center, 2 = right
-            console.log(`✓ Filled and centered unitname field with: ${unitName}`);
-          } else if (fieldName === 'date') {
-            const textField = form.getTextField('date');
-            textField.setText(dateString);
-            textField.setAlignment(1); // Center align
-            console.log(`✓ Filled and centered date field with: ${dateString}`);
-          }
-        });
+        if (fields.length > 0) {
+          console.log('Found form fields:', fields.map(f => f.getName()));
+          console.log('Looking for fields: unitname, date');
+          
+          // Use the PDF name without "SQP" suffix for unitname
+          const unitName = outputName.replace(/ SQP$/, '');
+          console.log('Will fill unitname with:', unitName);
+          
+          const currentDate = new Date();
+          const dateString = `${currentDate.getFullYear()}.${String(currentDate.getMonth() + 1).padStart(2, '0')}.${String(currentDate.getDate()).padStart(2, '0')}`;
+          console.log('Will fill date with:', dateString);
+          
+          fields.forEach(field => {
+            const fieldName = field.getName();
+            console.log(`Processing field: ${fieldName}`);
+            if (fieldName === 'unitname') {
+              const textField = form.getTextField('unitname');
+              textField.setText(unitName);
+              textField.setAlignment(1); // Center align
+              console.log(`✓ Filled and centered unitname field with: ${unitName}`);
+            } else if (fieldName === 'date') {
+              const textField = form.getTextField('date');
+              textField.setText(dateString);
+              textField.setAlignment(1); // Center align
+              console.log(`✓ Filled and centered date field with: ${dateString}`);
+            }
+          });
+          
+          form.flatten();
+        }
         
-        // Flatten the form to make fields non-editable
-        form.flatten();
+        // Copy all pages from standard cover PDF
+        const standardCoverPages = await pdfDoc.copyPages(standardCoverPdf, standardCoverPdf.getPageIndices());
+        standardCoverPages.forEach((page) => pdfDoc.addPage(page));
+        currentPage += standardCoverPages.length;
         
-      } catch (error) {
-        console.log('No form fields found in cover page or error filling them:', error);
-        // Continue without form filling if there are no fields or an error occurs
+        console.log(`Added ${standardCoverPages.length} standard cover page(s)`);
+      } else {
+        console.log('No standard cover found, skipping');
       }
+    } catch (error) {
+      console.log('Could not load standard cover:', error);
+    }
+
+    // Step 2: Add extra page if provided (between cover and TOC)
+    if (coverFile) {
+      const extraBytes = await readFileAsArrayBuffer(coverFile);
+      const extraPdf = await PDFDocument.load(new Uint8Array(extraBytes));
       
-      const coverPages = await pdfDoc.copyPages(coverPdf, coverPdf.getPageIndices());
-      coverPages.forEach(page => pdfDoc.addPage(page));
-      currentPage += coverPages.length;
+      const extraPages = await pdfDoc.copyPages(extraPdf, extraPdf.getPageIndices());
+      extraPages.forEach(page => pdfDoc.addPage(page));
+      currentPage += extraPages.length;
+      
+      console.log(`Added ${extraPages.length} extra page(s)`);
     }
     
     // Create TOC placeholder (we'll fill this later)
