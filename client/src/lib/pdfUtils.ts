@@ -144,12 +144,12 @@ export const generatePDF = async (
       try {
         const form = coverPdf.getForm();
         
-        // Get current date in Danish format (DD-MM-YYYY)
+        // Get current date in format YYYY.MM.DD
         const currentDate = new Date();
         const day = currentDate.getDate().toString().padStart(2, '0');
         const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
         const year = currentDate.getFullYear();
-        const dateString = `${day}-${month}-${year}`;
+        const dateString = `${year}.${month}.${day}`;
         
         // Get unit name (PDF name without " SQP")
         const unitName = outputName.replace(/ SQP$/, '');
@@ -157,17 +157,21 @@ export const generatePDF = async (
         // Fill the form fields
         const fields = form.getFields();
         console.log('Found form fields:', fields.map(f => f.getName()));
+        console.log('Looking for fields: unitname, date');
+        console.log('Will fill unitname with:', unitName);
+        console.log('Will fill date with:', dateString);
         
         fields.forEach(field => {
           const fieldName = field.getName();
+          console.log(`Processing field: ${fieldName}`);
           if (fieldName === 'unitname') {
             const textField = form.getTextField('unitname');
             textField.setText(unitName);
-            console.log(`Filled unitname field with: ${unitName}`);
+            console.log(`✓ Filled unitname field with: ${unitName}`);
           } else if (fieldName === 'date') {
             const textField = form.getTextField('date');
             textField.setText(dateString);
-            console.log(`Filled date field with: ${dateString}`);
+            console.log(`✓ Filled date field with: ${dateString}`);
           }
         });
         
