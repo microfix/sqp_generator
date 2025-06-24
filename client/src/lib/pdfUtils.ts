@@ -394,7 +394,7 @@ export const generatePDF = async (
       
       page.drawText(pageText, {
         x: 50, // Left margin
-        y: 30, // Bottom margin
+        y: 15, // Bottom margin (moved lower)
         size: 10,
         font: font,
         color: rgb(0, 0, 0),
