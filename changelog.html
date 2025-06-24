@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Generator KS - Changelog</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 40px;
+            background: white;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+        }
+        h3 {
+            color: #2980b9;
+            margin-top: 25px;
+        }
+        h4 {
+            color: #7f8c8d;
+            margin-top: 20px;
+        }
+        ul, ol {
+            margin-left: 20px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        strong {
+            color: #2c3e50;
+        }
+        .highlight {
+            background-color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .workflow {
+            background-color: #e8f6f3;
+            border-left: 4px solid #27ae60;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .note {
+            background-color: #fef9e7;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin: 15px 0;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Changelog - PDF Generator KS</h1>
+    
+    <h2>Version 2.0 - 24. juni 2025</h2>
+    
+    <h3>Nye funktioner</h3>
+    
+    <h4>Automatisk formularudfyldelse</h4>
+    <ul>
+        <li><strong>PDF-formularer udfyldes automatisk</strong> med projektdata ved generering</li>
+        <li><strong>Centreret tekst</strong> i alle formularfelter for professionelt udseende</li>
+        <li><strong>Datoformat standardiseret</strong> til dansk format (YYYY.MM.DD)</li>
+        <li>Automatisk udfyldelse af "unitname" og "date" felter i forsider</li>
+    </ul>
+    
+    <h4>Forbedret projekthåndtering</h4>
+    <ul>
+        <li><strong>Automatisk PDF-navngivning</strong> baseret på projekttype og navn</li>
+        <li><strong>Projekttype-specifike dokumentnumre</strong>:
+            <ul>
+                <li>BU-projekter: "Bilag 2 til SAT" prefix</li>
+                <li>HVAC-projekter: "Bilag 3 til SAT" prefix</li>
+            </ul>
+        </li>
+        <li><strong>Dokumentnummer-optimering</strong>: Kun NNPPV-delen indtastes (første del tilføjes automatisk)</li>
+        <li><strong>Real-time søgning</strong> i projektlisten for hurtig filtrering</li>
+    </ul>
+    
+    <h4>Edge Browser-kompatibilitet</h4>
+    <ul>
+        <li><strong>Specialløsning til Edge browser</strong> på firmacomputere</li>
+        <li><strong>Trinvis mappeupload</strong> - upload én mappe ad gangen</li>
+        <li><strong>Automatisk sammenlægning</strong> af flere mapper til samme projekt</li>
+        <li><strong>Klar vejledning</strong> til Edge-brugere med trin-for-trin instruktioner</li>
+    </ul>
+    
+    <h4>Brugervenlig interface</h4>
+    <ul>
+        <li><strong>Integreret hjælpesystem</strong> med detaljeret SQP-rapport guide</li>
+        <li><strong>Dalux-integration instruktioner</strong> for korrekt workflow</li>
+        <li><strong>Forbedret fejlhåndtering</strong> med brugervenlige beskeder</li>
+        <li><strong>Responsivt design</strong> der fungerer på alle skærmstørrelser</li>
+    </ul>
+    
+    <h3>Tekniske forbedringer</h3>
+    
+    <h4>Database-integration</h4>
+    <ul>
+        <li><strong>PostgreSQL database</strong> til permanent projekthåndtering</li>
+        <li><strong>Drizzle ORM</strong> for type-sikker databaseadgang</li>
+        <li><strong>Automatisk skema-migrering</strong> ved opdateringer</li>
+        <li><strong>Robust fejlhåndtering</strong> for databaseoperationer</li>
+    </ul>
+    
+    <h4>PDF-behandling</h4>
+    <ul>
+        <li><strong>Avanceret PDF-sammenlægning</strong> med pdf-lib</li>
+        <li><strong>Intelligent mappestruktur-genkendelse</strong> fra uploads</li>
+        <li><strong>Automatisk indholdsfortegnelse</strong> baseret på mappestruktur</li>
+        <li><strong>JPEG til PDF-konvertering</strong> for billedfiler</li>
+    </ul>
+    
+    <h4>Performance-optimering</h4>
+    <ul>
+        <li><strong>React Query</strong> til effektiv data-caching</li>
+        <li><strong>Hot module replacement</strong> for hurtig udvikling</li>
+        <li><strong>Optimeret bundling</strong> med Vite</li>
+        <li><strong>Lazy loading</strong> af komponenter</li>
+    </ul>
+    
+    <h3>Fejlrettelser</h3>
+    
+    <h4>Browser-kompatibilitet</h4>
+    <ul>
+        <li><strong>Løst Edge browser mappeupload-problem</strong> med webkitdirectory-attribut</li>
+        <li><strong>Forbedret fejlmeddelelser</strong> ved browser-inkompatibilitet</li>
+        <li><strong>Fallback-løsninger</strong> for ældre browsere</li>
+    </ul>
+    
+    <h4>Stabilitet</h4>
+    <ul>
+        <li><strong>Robust filhåndtering</strong> med bedre fejlhåndtering</li>
+        <li><strong>Memory leak-forebyggelse</strong> i PDF-behandling</li>
+        <li><strong>Forbedret error boundaries</strong> for bedre brugeroplevelse</li>
+    </ul>
+    
+    <h3>Arkitektur-ændringer</h3>
+    
+    <h4>Frontend</h4>
+    <ul>
+        <li><strong>React 18</strong> med moderne hooks og suspense</li>
+        <li><strong>ShadCN UI-komponenter</strong> for konsistent design</li>
+        <li><strong>Tailwind CSS</strong> for vedligeholdelsesvenlig styling</li>
+        <li><strong>TypeScript</strong> for type-sikkerhed gennem hele applikationen</li>
+    </ul>
+    
+    <h4>Backend</h4>
+    <ul>
+        <li><strong>Express.js</strong> server med moderne middleware</li>
+        <li><strong>Session-håndtering</strong> med PostgreSQL-opbevaring</li>
+        <li><strong>RESTful API</strong> design med konsistent fejlhåndtering</li>
+        <li><strong>Environment-baseret</strong> konfiguration</li>
+    </ul>
+    
+    <h4>Deployment</h4>
+    <ul>
+        <li><strong>Replit-native deployment</strong> konfiguration</li>
+        <li><strong>Automatisk build-pipeline</strong> fra udvikling til produktion</li>
+        <li><strong>Environment secrets</strong> håndtering for sikkerhed</li>
+    </ul>
+    
+    <h3>Brugerarbejdsgang</h3>
+    
+    <div class="workflow">
+        <h4>For BU-projekter</h4>
+        <ol>
+            <li>Opret projekt med type "BU"</li>
+            <li>Dokumentnummer udfyldes automatisk som "Bilag 2 til SAT NNPPV[dit nummer]"</li>
+            <li>PDF navngives automatisk som "[Projektnavn] BU SQP"</li>
+        </ol>
+        
+        <h4>For HVAC-projekter</h4>
+        <ol>
+            <li>Opret projekt med type "HVAC"</li>
+            <li>Dokumentnummer udfyldes automatisk som "Bilag 3 til SAT NNPPV[dit nummer]"</li>
+            <li>PDF navngives automatisk som "[Projektnavn] HVAC SQP"</li>
+        </ol>
+        
+        <h4>Edge Browser workflow</h4>
+        <ol>
+            <li>Klik på "Choose files" eller "Upload mappe" knappen</li>
+            <li>Vælg din første mappe</li>
+            <li>Upload den</li>
+            <li>Klik på "Upload mappe" igen for næste mappe</li>
+            <li>Gentag til alle mapper er uploadet</li>
+        </ol>
+    </div>
+    
+    <h3>Kommende funktioner</h3>
+    <ul>
+        <li>Brugerautentificering og roller</li>
+        <li>Projekt-templates til gentagende opgaver</li>
+        <li>Bulk-operations for store projekter</li>
+        <li>Avanceret rapportering og analytics</li>
+    </ul>
+    
+    <div class="note">
+        <strong>Note</strong>: Denne version er fuldt kompatibel med eksisterende projekter og kræver ingen data-migration.
+    </div>
+</body>
+</html>
