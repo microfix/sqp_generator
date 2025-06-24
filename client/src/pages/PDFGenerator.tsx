@@ -95,14 +95,46 @@ export default function PDFGenerator() {
         type: f.type
       })));
       
-      // Edge-specific processing
-      const structure = processUploadedFilesForEdge(fileArray);
-      setFolderStructure(structure);
+      // Edge-specific processing - merge with existing structure
+      const newStructure = processUploadedFilesForEdge(fileArray);
+      
+      // Merge with existing folder structure
+      setFolderStructure(prevStructure => {
+        const mergedStructure = { ...prevStructure };
+        
+        newStructure.sections.forEach(newSection => {
+          // Check if section already exists
+          const existingSection = mergedStructure.sections.find(s => s.title === newSection.title);
+          
+          if (existingSection) {
+            // Merge files and subpoints
+            existingSection.files.push(...newSection.files);
+            newSection.subpoints.forEach(newSubpoint => {
+              const existingSubpoint = existingSection.subpoints.find(sp => sp.title === newSubpoint.title);
+              if (existingSubpoint) {
+                existingSubpoint.files.push(...newSubpoint.files);
+              } else {
+                existingSection.subpoints.push(newSubpoint);
+              }
+            });
+          } else {
+            // Add new section
+            mergedStructure.sections.push(newSection);
+          }
+        });
+        
+        return mergedStructure;
+      });
       
       toast({
-        title: "Mapper uploadet (Edge mode)",
-        description: `${structure.sections.length} sektioner blev uploadet.`,
+        title: "Mappe tilføjet",
+        description: `${newStructure.sections.length} nye sektioner blev tilføjet. Upload flere mapper hvis nødvendigt.`,
       });
+      
+      // Clear the input so the same folder can be selected again if needed
+      if (folderInputRef.current) {
+        folderInputRef.current.value = "";
+      }
     }
   };
 
