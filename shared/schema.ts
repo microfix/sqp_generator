@@ -28,10 +28,11 @@ export const buildingProjects = pgTable("building_projects", {
 
 export const insertBuildingProjectSchema = createInsertSchema(buildingProjects).pick({
   name: true,
-  pdfName: true,
   documentNumberLeft: true,
   documentNumberCenter: true,
   projectType: true,
+}).extend({
+  // pdfName will be auto-generated, so we don't include it in the insert schema
 });
 
 export type InsertBuildingProject = z.infer<typeof insertBuildingProjectSchema>;

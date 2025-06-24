@@ -16,7 +16,6 @@ interface EditBuildingProjectDialogProps {
 
 export function EditBuildingProjectDialog({ project, onProjectUpdated }: EditBuildingProjectDialogProps) {
   const [name, setName] = useState("");
-  const [pdfName, setPdfName] = useState("");
   const [documentNumberLeft, setDocumentNumberLeft] = useState("");
   const [documentNumberCenter, setDocumentNumberCenter] = useState("");
   const [projectType, setProjectType] = useState<"HVAC" | "BU">("HVAC");
@@ -37,7 +36,6 @@ export function EditBuildingProjectDialog({ project, onProjectUpdated }: EditBui
       const docNumberLeft = project.documentNumberLeft.replace(/^Bilag [23] til SAT /, "");
       
       setName(nameWithoutPrefix);
-      setPdfName(project.pdfName);
       setDocumentNumberLeft(docNumberLeft);
       setDocumentNumberCenter(project.documentNumberCenter);
       setProjectType((project.projectType as "HVAC" | "BU") || projectTypeFromName);
@@ -48,10 +46,10 @@ export function EditBuildingProjectDialog({ project, onProjectUpdated }: EditBui
     e.preventDefault();
     
     // Validate form
-    if (!name.trim() || !pdfName.trim()) {
+    if (!name.trim()) {
       toast({
         title: "Manglende information",
-        description: "Anlægsnavn og PDF-navn er påkrævet.",
+        description: "Anlægsnavn er påkrævet.",
         variant: "destructive"
       });
       return;
@@ -63,6 +61,9 @@ export function EditBuildingProjectDialog({ project, onProjectUpdated }: EditBui
       // Add project type prefix to name
       const projectName = `${projectType} ${name}`;
       
+      // Auto-generate PDF name: [name] [projectType] SQP
+      const generatedPdfName = `${name} ${projectType} SQP`;
+      
       // Format document number left based on project type
       const formattedDocNumberLeft = projectType === "HVAC" 
         ? `Bilag 3 til SAT ${documentNumberLeft}`
@@ -70,7 +71,7 @@ export function EditBuildingProjectDialog({ project, onProjectUpdated }: EditBui
       
       const updatedProject = {
         name: projectName,
-        pdfName,
+        pdfName: generatedPdfName,
         documentNumberLeft: formattedDocNumberLeft,
         documentNumberCenter,
         projectType
@@ -143,20 +144,14 @@ export function EditBuildingProjectDialog({ project, onProjectUpdated }: EditBui
               id="edit-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Indtast anlæggets navn (uden HVAC/BU prefix)"
+              placeholder="f.eks. KA 1007 01"
               className="bg-opacity-10 bg-white border-accent-1"
             />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="edit-pdfName">PDF Navn (uden .pdf)</Label>
-            <Input
-              id="edit-pdfName"
-              value={pdfName}
-              onChange={(e) => setPdfName(e.target.value)}
-              placeholder="Indtast navnet på PDF-filen"
-              className="bg-opacity-10 bg-white border-accent-1"
-            />
+            {name && (
+              <p className="text-sm text-gray-400">
+                PDF navn: {name} {projectType} SQP
+              </p>
+            )}
           </div>
           
           <div className="space-y-2">
