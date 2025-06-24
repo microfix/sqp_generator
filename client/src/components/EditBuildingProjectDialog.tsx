@@ -125,20 +125,33 @@ export function EditBuildingProjectDialog({ project, onProjectUpdated }: EditBui
         
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Anlægsnavn</Label>
+            <Label htmlFor="edit-projectType">Projekttype</Label>
+            <Select value={projectType} onValueChange={(value: "HVAC" | "BU") => setProjectType(value)}>
+              <SelectTrigger className="bg-opacity-10 bg-white border-accent-1">
+                <SelectValue placeholder="Vælg projekttype" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="HVAC">HVAC</SelectItem>
+                <SelectItem value="BU">BU</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="edit-name">Anlægsnavn</Label>
             <Input
-              id="name"
+              id="edit-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Indtast anlæggets navn"
+              placeholder="Indtast anlæggets navn (uden HVAC/BU prefix)"
               className="bg-opacity-10 bg-white border-accent-1"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="pdfName">PDF Navn (uden .pdf)</Label>
+            <Label htmlFor="edit-pdfName">PDF Navn (uden .pdf)</Label>
             <Input
-              id="pdfName"
+              id="edit-pdfName"
               value={pdfName}
               onChange={(e) => setPdfName(e.target.value)}
               placeholder="Indtast navnet på PDF-filen"
@@ -147,23 +160,23 @@ export function EditBuildingProjectDialog({ project, onProjectUpdated }: EditBui
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="documentNumberLeft">Dokumentnummer (venstre side)</Label>
+            <Label htmlFor="edit-documentNumberLeft">Dokument nummer (efter SAT)</Label>
             <Input
-              id="documentNumberLeft"
+              id="edit-documentNumberLeft"
               value={documentNumberLeft}
               onChange={(e) => setDocumentNumberLeft(e.target.value)}
-              placeholder="Dokumentnummer til venstre i header"
+              placeholder={`Tilføjes efter "Bilag ${projectType === "HVAC" ? "3" : "2"} til SAT "`}
               className="bg-opacity-10 bg-white border-accent-1"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="documentNumberCenter">Dokumentnummer (centreret)</Label>
+            <Label htmlFor="edit-documentNumberCenter">Dokumentnummer (højre side)</Label>
             <Input
-              id="documentNumberCenter"
+              id="edit-documentNumberCenter"
               value={documentNumberCenter}
               onChange={(e) => setDocumentNumberCenter(e.target.value)}
-              placeholder="Dokumentnummer centreret i header"
+              placeholder="Dokumentnummer til højre i header"
               className="bg-opacity-10 bg-white border-accent-1"
             />
           </div>
