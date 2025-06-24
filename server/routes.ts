@@ -48,6 +48,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: result.error.format() });
       }
       
+      // Ensure pdfName is included - it should be auto-generated on frontend
+      if (!result.data.pdfName && result.data.name && result.data.projectType) {
+        // Extract name without project type prefix for PDF name generation
+        const nameWithoutPrefix = result.data.name.replace(/^(HVAC |BU )/, "");
+        result.data.pdfName = `${nameWithoutPrefix} ${result.data.projectType} SQP`;
+      }
+      
       const project = await storage.createBuildingProject(result.data);
       res.status(201).json(project);
     } catch (error) {
