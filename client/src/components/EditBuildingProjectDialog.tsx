@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pencil } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +19,7 @@ export function EditBuildingProjectDialog({ project, onProjectUpdated }: EditBui
   const [pdfName, setPdfName] = useState("");
   const [documentNumberLeft, setDocumentNumberLeft] = useState("");
   const [documentNumberCenter, setDocumentNumberCenter] = useState("");
+  const [projectType, setProjectType] = useState<"HVAC" | "BU">("HVAC");
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -26,10 +28,19 @@ export function EditBuildingProjectDialog({ project, onProjectUpdated }: EditBui
   // Initialize form with project data when dialog opens
   useEffect(() => {
     if (isOpen && project) {
-      setName(project.name);
+      // Extract project type and name without prefix
+      const projectTypeFromName = project.name.startsWith("HVAC ") ? "HVAC" : 
+                                 project.name.startsWith("BU ") ? "BU" : "HVAC";
+      const nameWithoutPrefix = project.name.replace(/^(HVAC |BU )/, "");
+      
+      // Extract document number without prefix
+      const docNumberLeft = project.documentNumberLeft.replace(/^Bilag [23] til SAT /, "");
+      
+      setName(nameWithoutPrefix);
       setPdfName(project.pdfName);
-      setDocumentNumberLeft(project.documentNumberLeft);
+      setDocumentNumberLeft(docNumberLeft);
       setDocumentNumberCenter(project.documentNumberCenter);
+      setProjectType((project.projectType as "HVAC" | "BU") || projectTypeFromName);
     }
   }, [isOpen, project]);
   
@@ -49,11 +60,20 @@ export function EditBuildingProjectDialog({ project, onProjectUpdated }: EditBui
     setIsLoading(true);
     
     try {
+      // Add project type prefix to name
+      const projectName = `${projectType} ${name}`;
+      
+      // Format document number left based on project type
+      const formattedDocNumberLeft = projectType === "HVAC" 
+        ? `Bilag 3 til SAT ${documentNumberLeft}`
+        : `Bilag 2 til SAT ${documentNumberLeft}`;
+      
       const updatedProject = {
-        name,
+        name: projectName,
         pdfName,
-        documentNumberLeft,
-        documentNumberCenter
+        documentNumberLeft: formattedDocNumberLeft,
+        documentNumberCenter,
+        projectType
       };
       
       const response = await fetch(`/api/building-projects/${project.id}`, {

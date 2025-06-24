@@ -114,12 +114,25 @@ export function BuildingProjectDialog({ onProjectAdded }: BuildingProjectDialogP
         
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
+            <Label htmlFor="projectType">Projekttype</Label>
+            <Select value={projectType} onValueChange={(value: "HVAC" | "BU") => setProjectType(value)}>
+              <SelectTrigger className="bg-opacity-10 bg-white border-accent-1">
+                <SelectValue placeholder="Vælg projekttype" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="HVAC">HVAC</SelectItem>
+                <SelectItem value="BU">BU</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
             <Label htmlFor="name">Anlægsnavn</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Indtast anlæggets navn"
+              placeholder="Indtast anlæggets navn (uden HVAC/BU prefix)"
               className="bg-opacity-10 bg-white border-accent-1"
             />
           </div>
@@ -136,23 +149,23 @@ export function BuildingProjectDialog({ onProjectAdded }: BuildingProjectDialogP
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="documentNumberLeft">Dokumentnummer (venstre side)</Label>
+            <Label htmlFor="documentNumberLeft">Dokument nummer (efter SAT)</Label>
             <Input
               id="documentNumberLeft"
               value={documentNumberLeft}
               onChange={(e) => setDocumentNumberLeft(e.target.value)}
-              placeholder="Dokumentnummer til venstre i header"
+              placeholder={`Tilføjes efter "Bilag ${projectType === "HVAC" ? "3" : "2"} til SAT "`}
               className="bg-opacity-10 bg-white border-accent-1"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="documentNumberCenter">Dokumentnummer (centreret)</Label>
+            <Label htmlFor="documentNumberCenter">Dokumentnummer (højre side)</Label>
             <Input
               id="documentNumberCenter"
               value={documentNumberCenter}
               onChange={(e) => setDocumentNumberCenter(e.target.value)}
-              placeholder="Dokumentnummer centreret i header"
+              placeholder="Dokumentnummer til højre i header"
               className="bg-opacity-10 bg-white border-accent-1"
             />
           </div>
