@@ -232,9 +232,12 @@ export default function PDFGenerator() {
           <label className="block mb-2 font-bold">
             <span className="flex items-center">
               <FileText className="w-5 h-5 mr-2" />
-              Upload forside (PDF):
+              Upload ekstra side (valgfri PDF mellem forside og indhold):
             </span>
           </label>
+          <div className="mb-2 text-sm text-blue-400 bg-blue-900 bg-opacity-20 p-2 rounded">
+            <strong>Info:</strong> Standard forside inkluderes automatisk. Her kan du uploade en ekstra PDF (f.eks. projektspecifikke oplysninger) som placeres mellem forsiden og indholdsfortegnelsen.
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <input 
               type="file" 
@@ -247,7 +250,7 @@ export default function PDFGenerator() {
             <button 
               className="btn-clear px-4 py-2 rounded-md text-sm bg-gradient-to-br from-accent-1 to-accent-2 border-2 border-primary-2 shadow-md hover:translate-y-[-1px] transition-transform duration-200"
               onClick={clearCoverFile}
-              title="Ryd valgt forside"
+              title="Ryd valgt ekstra side"
             >
               Ryd filer
             </button>

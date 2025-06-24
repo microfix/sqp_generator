@@ -7,6 +7,15 @@ import { insertBuildingProjectSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve standard cover PDF
+  app.get('/standard_forside.pdf', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'standard_forside.pdf'), (err) => {
+      if (err) {
+        console.log('Standard forside not found');
+        res.status(404).send('Standard forside not found');
+      }
+    });
+  });
   // Building Projects API Routes
   
   // Get all building projects
