@@ -135,10 +135,50 @@ export const generatePDF = async (
     let currentPage = 0;
     const tocEntries: { title: string, page: number, level: number, showPage: boolean }[] = [];
     
-    // Add cover page if available
+    // Add cover page if available and fill form fields
     if (coverFile) {
       const coverBytes = await readFileAsArrayBuffer(coverFile);
       const coverPdf = await PDFDocument.load(new Uint8Array(coverBytes));
+      
+      // Try to fill form fields in the cover page
+      try {
+        const form = coverPdf.getForm();
+        
+        // Get current date in Danish format (DD-MM-YYYY)
+        const currentDate = new Date();
+        const day = currentDate.getDate().toString().padStart(2, '0');
+        const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+        const year = currentDate.getFullYear();
+        const dateString = `${day}-${month}-${year}`;
+        
+        // Get unit name (PDF name without " SQP")
+        const unitName = outputName.replace(/ SQP$/, '');
+        
+        // Fill the form fields
+        const fields = form.getFields();
+        console.log('Found form fields:', fields.map(f => f.getName()));
+        
+        fields.forEach(field => {
+          const fieldName = field.getName();
+          if (fieldName === 'unitname') {
+            const textField = form.getTextField('unitname');
+            textField.setText(unitName);
+            console.log(`Filled unitname field with: ${unitName}`);
+          } else if (fieldName === 'date') {
+            const textField = form.getTextField('date');
+            textField.setText(dateString);
+            console.log(`Filled date field with: ${dateString}`);
+          }
+        });
+        
+        // Flatten the form to make fields non-editable
+        form.flatten();
+        
+      } catch (error) {
+        console.log('No form fields found in cover page or error filling them:', error);
+        // Continue without form filling if there are no fields or an error occurs
+      }
+      
       const coverPages = await pdfDoc.copyPages(coverPdf, coverPdf.getPageIndices());
       coverPages.forEach(page => pdfDoc.addPage(page));
       currentPage += coverPages.length;
