@@ -265,10 +265,11 @@ export const generatePDF = async (
         });
       }
       
-      // Add document number in left-center header if provided
+      // Add document number in right header if provided
       if (documentNumberCenter) {
+        const textWidth = font.widthOfTextAtSize(documentNumberCenter, 10);
         page.drawText(documentNumberCenter, {
-          x: width * 0.3, // Moved to left (30% from left edge instead of center)
+          x: width - textWidth - 50, // Right aligned with margin
           y: height - 15, // Moved higher up (was -30)
           size: 10,
           font: font,
