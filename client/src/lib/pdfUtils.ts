@@ -4,6 +4,94 @@ import { PDFDocument, StandardFonts, rgb, PDFPage } from "pdf-lib";
 // Function to generate a unique ID
 export const generateId = (): string => '_' + Math.random().toString(36).substr(2, 9);
 
+// Edge-specific file processing function
+export const processUploadedFilesForEdge = (files: File[]): FolderStructureType => {
+  const folderStructure: FolderStructureType = { sections: [] };
+  const pathMap = new Map<string, any>();
+  
+  console.log('Processing files for Edge:', files.length);
+  
+  files.forEach(file => {
+    // @ts-ignore - webkitRelativePath exists but is not in TypeScript definitions
+    const relativePath = file.webkitRelativePath || file.name;
+    console.log(`Processing file: ${file.name}, relative path: ${relativePath}`);
+    
+    // Only accept PDF and JPEG files
+    if (!file.type.match('application/pdf') && !file.type.match('image/jpeg')) {
+      console.warn(`File ignored (not PDF/JPEG): ${file.name}`);
+      return;
+    }
+    
+    // Parse the path
+    const pathParts = relativePath.split('/');
+    console.log(`Path parts for ${file.name}:`, pathParts);
+    
+    if (pathParts.length === 1) {
+      // File without folder structure - create default section
+      const defaultSectionTitle = 'Uploadede filer';
+      if (!pathMap.has(defaultSectionTitle)) {
+        const sectionId = generateId();
+        const section = {
+          id: sectionId,
+          title: defaultSectionTitle,
+          files: [],
+          subpoints: [],
+          showInToc: true
+        };
+        folderStructure.sections.push(section);
+        pathMap.set(defaultSectionTitle, section);
+      }
+      pathMap.get(defaultSectionTitle)!.files.push(file);
+    } else if (pathParts.length >= 2) {
+      // File with folder structure
+      const topLevelFolder = pathParts[0];
+      const secondLevelFolder = pathParts.length > 2 ? pathParts[1] : null;
+      
+      // Create main section if it doesn't exist
+      if (!pathMap.has(topLevelFolder)) {
+        const sectionId = generateId();
+        const section = {
+          id: sectionId,
+          title: topLevelFolder,
+          files: [],
+          subpoints: [],
+          showInToc: true
+        };
+        folderStructure.sections.push(section);
+        pathMap.set(topLevelFolder, section);
+      }
+      
+      const section = pathMap.get(topLevelFolder);
+      
+      // If there's a subfolder, create the subpoint
+      if (secondLevelFolder && pathParts.length > 2) {
+        const subpointKey = `${topLevelFolder}/${secondLevelFolder}`;
+        
+        if (!pathMap.has(subpointKey)) {
+          const subpointId = generateId();
+          const subpoint = {
+            id: subpointId,
+            title: secondLevelFolder,
+            files: [],
+            showInToc: true
+          };
+          section.subpoints.push(subpoint);
+          pathMap.set(subpointKey, subpoint);
+        }
+        
+        const subpoint = pathMap.get(subpointKey);
+        subpoint.files.push(file);
+      } else {
+        // File directly in the main folder
+        section.files.push(file);
+      }
+    }
+  });
+  
+  console.log('Final folder structure:', folderStructure);
+  return folderStructure;
+};
+
 // Function to process uploaded files into a structured format
 export const processUploadedFiles = (files: File[]): FolderStructureType => {
   const folderStructure: FolderStructureType = { sections: [] };

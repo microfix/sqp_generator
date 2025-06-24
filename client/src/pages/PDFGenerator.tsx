@@ -1,7 +1,7 @@
 import { useState, useRef, ChangeEvent, useEffect } from "react";
 import { FolderStructure } from "@/components/pdf/FolderStructure";
 import { FolderData, FolderStructureType } from "@/lib/types";
-import { generatePDF, processUploadedFiles } from "@/lib/pdfUtils";
+import { generatePDF, processUploadedFiles, processUploadedFilesForEdge } from "@/lib/pdfUtils";
 import { FileText, Folder, File, FileOutput, Building } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BuildingProjectDialog } from "@/components/BuildingProjectDialog";
@@ -84,10 +84,25 @@ export default function PDFGenerator() {
   };
 
   const handleFolderUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files);
-      const structure = processUploadedFiles(files);
+    const files = e.target.files;
+    console.log('Edge Browser Upload - Files count:', files?.length || 0);
+    
+    if (files && files.length > 0) {
+      const fileArray = Array.from(files);
+      console.log('Edge Browser - File details:', fileArray.map(f => ({
+        name: f.name,
+        path: (f as any).webkitRelativePath || 'NO_PATH',
+        type: f.type
+      })));
+      
+      // Edge-specific processing
+      const structure = processUploadedFilesForEdge(fileArray);
       setFolderStructure(structure);
+      
+      toast({
+        title: "Mapper uploadet (Edge mode)",
+        description: `${structure.sections.length} sektioner blev uploadet.`,
+      });
     }
   };
 
@@ -217,6 +232,9 @@ export default function PDFGenerator() {
               Upload mappe med punkter:
             </span>
           </label>
+          <div className="mb-2 text-sm text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 rounded">
+            <strong>Edge Browser bruger:</strong> Naviger til din hovedmappe, marker alle filer fra alle undermapper (Ctrl+A), og træk dem alle sammen til upload-feltet. Systemet vil automatisk gruppere dem i korrekte mapper.
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <input 
               type="file" 
@@ -224,10 +242,10 @@ export default function PDFGenerator() {
               ref={folderInputRef}
               // @ts-ignore - webkitdirectory exists but is not in TypeScript definitions
               webkitdirectory="true"
-              directory=""
               multiple
               onChange={handleFolderUpload}
               className="p-2 rounded-md w-full mb-2 md:mb-0 md:flex-1 bg-opacity-10 bg-white border border-accent-1" 
+              title="Edge Browser: Vælg alle filer fra alle mapper du vil inkludere. Systemet vil gruppere dem automatisk."
             />
             <button 
               className="btn-clear px-4 py-2 rounded-md text-sm bg-gradient-to-br from-accent-1 to-accent-2 border-2 border-primary-2 shadow-md hover:translate-y-[-1px] transition-transform duration-200"
