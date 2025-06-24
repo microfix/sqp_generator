@@ -167,11 +167,13 @@ export const generatePDF = async (
           if (fieldName === 'unitname') {
             const textField = form.getTextField('unitname');
             textField.setText(unitName);
-            console.log(`✓ Filled unitname field with: ${unitName}`);
+            textField.setAlignment(1); // 0 = left, 1 = center, 2 = right
+            console.log(`✓ Filled and centered unitname field with: ${unitName}`);
           } else if (fieldName === 'date') {
             const textField = form.getTextField('date');
             textField.setText(dateString);
-            console.log(`✓ Filled date field with: ${dateString}`);
+            textField.setAlignment(1); // Center align
+            console.log(`✓ Filled and centered date field with: ${dateString}`);
           }
         });
         
