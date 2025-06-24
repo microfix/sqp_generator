@@ -1,5 +1,32 @@
 # Changelog - PDF Generator KS
 
+## Version 2.1 - 24. juni 2025 (Opdatering)
+
+### 🔧 Forbedringer og fejlrettelser
+
+#### Standard forside-funktionalitet
+- **Automatisk standard forside** inkluderes nu fra `standard_forside.pdf` i rod-mappen
+- **Upload-felt ændret** til "ekstra side" mellem forside og indholdsfortegnelse
+- **Korrekt rækkefølge**: Standard forside → Ekstra side → Indholdsfortegnelse → Indhold
+- **Formularudfyldelse** virker stadig automatisk i standard forsiden
+
+#### Søgefunktionalitet
+- **Real-time søgning** tilføjet til anlægslisten for hurtig filtrering
+- **Live filtrering** på navn, PDF-navn og dokumentnumre
+- **Søgeresultat-tæller** viser antal matchende anlæg
+
+#### Sidetals-justering
+- **Sidetalsposition optimeret** for bedre layout
+- **Flyttet længere ned** på siden (y: 15) for mere plads til indhold
+- **Konsistent placering** på alle sider inklusiv indholdsfortegnelse
+
+#### Database og fejlrettelser
+- **Database tømt** for frisk start
+- **Server-stabilitet forbedret** med korrekte imports
+- **Edge browser-kompatibilitet** yderligere optimeret
+
+---
+
 ## Version 2.0 - 24. juni 2025
 
 ### 🚀 Nye funktioner
