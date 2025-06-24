@@ -23,6 +23,7 @@ export const buildingProjects = pgTable("building_projects", {
   pdfName: text("pdf_name").notNull(),
   documentNumberLeft: text("document_number_left").notNull(),
   documentNumberCenter: text("document_number_center").notNull(),
+  projectType: text("project_type").notNull().default("HVAC"), // "HVAC" or "BU"
 });
 
 export const insertBuildingProjectSchema = createInsertSchema(buildingProjects).pick({
@@ -30,6 +31,7 @@ export const insertBuildingProjectSchema = createInsertSchema(buildingProjects).
   pdfName: true,
   documentNumberLeft: true,
   documentNumberCenter: true,
+  projectType: true,
 });
 
 export type InsertBuildingProject = z.infer<typeof insertBuildingProjectSchema>;
