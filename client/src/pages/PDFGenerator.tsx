@@ -19,6 +19,7 @@ export default function PDFGenerator() {
   const [documentNumberLeft, setDocumentNumberLeft] = useState<string>("");
   const [documentNumberCenter, setDocumentNumberCenter] = useState<string>("");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   
   const coverInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -35,6 +36,14 @@ export default function PDFGenerator() {
       return response.json() as Promise<BuildingProject[]>;
     }
   });
+
+  // Filter projects based on search term
+  const filteredProjects = (buildingProjects || []).filter(project =>
+    project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    project.pdfName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    project.documentNumberLeft.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    project.documentNumberCenter.toLowerCase().includes(searchTerm.toLowerCase())
+  );
   
   // Handle selecting a building project from the dropdown
   const handleProjectChange = (projectId: string) => {
