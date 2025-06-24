@@ -265,7 +265,12 @@ export default function PDFGenerator() {
             </span>
           </label>
           <div className="mb-2 text-sm text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 rounded">
-            <strong>Edge Browser bruger:</strong> Naviger til din hovedmappe, marker alle filer fra alle undermapper (Ctrl+A), og træk dem alle sammen til upload-feltet. Systemet vil automatisk gruppere dem i korrekte mapper.
+            <strong>Edge Browser bruger:</strong><br/>
+            1. Klik på "Choose files" eller "Upload mappe" knappen<br/>
+            2. Vælg din første mappe<br/>
+            3. Upload den<br/>
+            4. Klik på "Upload mappe" igen for næste mappe<br/>
+            5. Gentag til alle mapper er uploadet
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <input 
@@ -279,6 +284,17 @@ export default function PDFGenerator() {
               className="p-2 rounded-md w-full mb-2 md:mb-0 md:flex-1 bg-opacity-10 bg-white border border-accent-1" 
               title="Edge Browser: Vælg alle filer fra alle mapper du vil inkludere. Systemet vil gruppere dem automatisk."
             />
+            <button 
+              className="btn-clear px-4 py-2 rounded-md text-sm bg-gradient-to-br from-green-500 to-green-600 border-2 border-primary-2 shadow-md hover:translate-y-[-1px] transition-transform duration-200"
+              onClick={() => {
+                if (folderInputRef.current) {
+                  folderInputRef.current.click();
+                }
+              }}
+              title="Upload en til mappe (Edge kompatibel)"
+            >
+              + Upload mappe
+            </button>
             <button 
               className="btn-clear px-4 py-2 rounded-md text-sm bg-gradient-to-br from-accent-1 to-accent-2 border-2 border-primary-2 shadow-md hover:translate-y-[-1px] transition-transform duration-200"
               onClick={clearFolderStructure}
