@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import path from "path";
 import { storage } from "./storage";
 
 // Import the building project schemas
@@ -9,10 +10,14 @@ import { z } from "zod";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve standard cover PDF
   app.get('/standard_forside.pdf', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'standard_forside.pdf'), (err) => {
+    const filePath = path.join(process.cwd(), 'standard_forside.pdf');
+    console.log('Attempting to serve standard_forside.pdf from:', filePath);
+    res.sendFile(filePath, (err) => {
       if (err) {
-        console.log('Standard forside not found');
+        console.log('Standard forside not found at:', filePath);
         res.status(404).send('Standard forside not found');
+      } else {
+        console.log('Successfully served standard_forside.pdf');
       }
     });
   });
