@@ -96,6 +96,25 @@ export const processUploadedFilesForEdge = (files: File[]): FolderStructureType 
     }
   });
   
+  // Sort all sections and subpoints numerically after creation
+  const sortSections = (sections: any[]) => {
+    sections.sort((a, b) => {
+      return a.title.localeCompare(b.title, undefined, { 
+        numeric: true, 
+        sensitivity: 'base' 
+      });
+    });
+    
+    // Recursively sort subpoints
+    sections.forEach(section => {
+      if (section.subpoints && section.subpoints.length > 0) {
+        sortSections(section.subpoints);
+      }
+    });
+  };
+  
+  sortSections(folderStructure.sections);
+  
   console.log('Final folder structure:', folderStructure);
   return folderStructure;
 };
@@ -327,8 +346,16 @@ export const generatePDF = async (
         }
       }
       
+      // Sort subpoints numerically before processing  
+      const sortedSubpoints = [...section.subpoints].sort((a, b) => {
+        return a.title.localeCompare(b.title, undefined, { 
+          numeric: true, 
+          sensitivity: 'base' 
+        });
+      });
+      
       // Then: Recursively process all subpoints (subfolders come after files)
-      for (const subpoint of section.subpoints) {
+      for (const subpoint of sortedSubpoints) {
         await processNestedSection(subpoint, level + 1);
       }
     };
