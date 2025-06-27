@@ -346,21 +346,14 @@ export const generatePDF = async (
         }
       }
       
-      // Sort subpoints numerically before processing  
-      const sortedSubpoints = [...section.subpoints].sort((a, b) => {
-        return a.title.localeCompare(b.title, undefined, { 
-          numeric: true, 
-          sensitivity: 'base' 
-        });
-      });
-      
-      // Then: Recursively process all subpoints (subfolders come after files)
-      for (const subpoint of sortedSubpoints) {
+      // Process subpoints in their current order (respects drag-and-drop reorganization)
+      // No additional sorting here - use the order from folderStructure
+      for (const subpoint of section.subpoints) {
         await processNestedSection(subpoint, level + 1);
       }
     };
 
-    // Process all top-level sections
+    // Process all top-level sections in their current order (respects drag-and-drop)
     for (const section of folderStructure.sections) {
       await processNestedSection(section, 0);
     }
