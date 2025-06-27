@@ -358,7 +358,7 @@ export const generatePDF = async (
       color: rgb(0, 0, 0),
     });
     
-    // Draw TOC entries
+    // Draw TOC entries with improved formatting
     let yPosition = height - 80;
     for (const entry of tocEntries) {
       if (yPosition < 50) {
@@ -368,20 +368,58 @@ export const generatePDF = async (
         currentPage++;
       }
       
-      const indent = entry.level * 20;
-      const entryText = entry.showPage 
-        ? `${entry.title}${'.'.repeat(Math.max(0, 50 - entry.title.length - indent))}${entry.page + 1}`
-        : entry.title;
+      const indent = entry.level * 15; // Reduced indent for cleaner look
+      const leftMargin = 50 + indent;
       
-      tocPage.drawText(entryText, {
-        x: 50 + indent,
-        y: yPosition,
-        size: 12,
-        font: entry.level === 0 ? boldFont : font,
-        color: rgb(0, 0, 0),
-      });
+      if (entry.showPage) {
+        // Calculate available space for dots
+        const pageNumberText = `${entry.page + 1}`;
+        const pageNumberWidth = font.widthOfTextAtSize(pageNumberText, 12);
+        const titleWidth = (entry.level === 0 ? boldFont : font).widthOfTextAtSize(entry.title, 12);
+        const availableSpace = width - leftMargin - titleWidth - pageNumberWidth - 100; // 100 for margins
+        const dotCount = Math.max(0, Math.floor(availableSpace / 3)); // Each dot is ~3 units wide
+        
+        // Draw title
+        tocPage.drawText(entry.title, {
+          x: leftMargin,
+          y: yPosition,
+          size: 12,
+          font: entry.level === 0 ? boldFont : font,
+          color: rgb(0, 0, 0),
+        });
+        
+        // Draw dots
+        if (dotCount > 0) {
+          const dotsText = '.'.repeat(dotCount);
+          tocPage.drawText(dotsText, {
+            x: leftMargin + titleWidth + 5,
+            y: yPosition,
+            size: 12,
+            font: font,
+            color: rgb(0, 0, 0),
+          });
+        }
+        
+        // Draw page number (right aligned)
+        tocPage.drawText(pageNumberText, {
+          x: width - pageNumberWidth - 50,
+          y: yPosition,
+          size: 12,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
+      } else {
+        // Just draw title without page number
+        tocPage.drawText(entry.title, {
+          x: leftMargin,
+          y: yPosition,
+          size: 12,
+          font: entry.level === 0 ? boldFont : font,
+          color: rgb(0, 0, 0),
+        });
+      }
       
-      yPosition -= 20;
+      yPosition -= entry.level === 0 ? 25 : 20; // More space after main sections
     }
     
     // Add page numbers to all pages and document numbers in header
