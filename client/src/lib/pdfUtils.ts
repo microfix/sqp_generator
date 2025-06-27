@@ -303,7 +303,7 @@ export const generatePDF = async (
         showPage: section.showInToc 
       });
       
-      // Add files in this section
+      // First: Add files in this section (files in current folder come first)
       for (const file of section.files) {
         if (file.type === 'application/pdf') {
           const fileBytes = await readFileAsArrayBuffer(file);
@@ -317,7 +317,7 @@ export const generatePDF = async (
         }
       }
       
-      // Recursively process all subpoints
+      // Then: Recursively process all subpoints (subfolders come after files)
       for (const subpoint of section.subpoints) {
         await processNestedSection(subpoint, level + 1);
       }
