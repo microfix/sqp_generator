@@ -223,6 +223,19 @@ export default function PDFGenerator() {
     setFolderStructure(newStructure);
   };
 
+  const handleReorderSubpoints = (sectionId: string, newSubpoints: any[]) => {
+    setFolderStructure(prev => {
+      const newStructure = { ...prev };
+      const sectionIndex = newStructure.sections.findIndex(s => s.id === sectionId);
+      
+      if (sectionIndex !== -1) {
+        newStructure.sections[sectionIndex].subpoints = newSubpoints;
+      }
+      
+      return newStructure;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-primary-1 text-primary-2 p-4 md:p-8 font-anton">
       <div className="max-w-5xl mx-auto bg-glass backdrop-blur-md rounded-xl border border-opacity-30 border-primary-2 p-6 md:p-10 shadow-custom">
@@ -318,6 +331,7 @@ export default function PDFGenerator() {
           updateSectionVisibility={updateSectionVisibility}
           updateSubpointVisibility={updateSubpointVisibility}
           onReorderSections={handleReorderSections}
+          onReorderSubpoints={handleReorderSubpoints}
         />
         
         <hr className="border-accent-1 my-6" />

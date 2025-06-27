@@ -22,13 +22,15 @@ interface FolderStructureProps {
   updateSectionVisibility: (sectionId: string, visible: boolean) => void;
   updateSubpointVisibility: (sectionId: string, subpointId: string, visible: boolean) => void;
   onReorderSections?: (newStructure: FolderStructureType) => void;
+  onReorderSubpoints?: (sectionId: string, newSubpoints: any[]) => void;
 }
 
 export const FolderStructure: React.FC<FolderStructureProps> = ({
   folderStructure,
   updateSectionVisibility,
   updateSubpointVisibility,
-  onReorderSections
+  onReorderSections,
+  onReorderSubpoints
 }) => {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -80,6 +82,7 @@ export const FolderStructure: React.FC<FolderStructureProps> = ({
                 updateSectionVisibility={updateSectionVisibility}
                 updateSubpointVisibility={updateSubpointVisibility}
                 isDraggable={true}
+                onReorderSubpoints={onReorderSubpoints}
               />
             ))}
           </div>

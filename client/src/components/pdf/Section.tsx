@@ -4,6 +4,21 @@ import { SectionType } from "@/lib/types";
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 
 interface SectionProps {
   section: SectionType;
@@ -11,6 +26,7 @@ interface SectionProps {
   updateSubpointVisibility: (sectionId: string, subpointId: string, visible: boolean) => void;
   isDraggable?: boolean;
   level?: number;
+  onReorderSubpoints?: (sectionId: string, newSubpoints: any[]) => void;
 }
 
 export const Section: React.FC<SectionProps> = ({ 
@@ -18,7 +34,8 @@ export const Section: React.FC<SectionProps> = ({
   updateSectionVisibility,
   updateSubpointVisibility,
   isDraggable = false,
-  level = 0
+  level = 0,
+  onReorderSubpoints
 }) => {
   const {
     attributes,
@@ -29,8 +46,27 @@ export const Section: React.FC<SectionProps> = ({
     isDragging,
   } = useSortable({ 
     id: section.id,
-    disabled: !isDraggable || level > 0 // Only allow dragging main sections
+    disabled: !isDraggable || level > 1 // Allow dragging main sections and first-level subpoints
   });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleSubpointDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id && onReorderSubpoints) {
+      const oldIndex = section.subpoints.findIndex(subpoint => subpoint.id === active.id);
+      const newIndex = section.subpoints.findIndex(subpoint => subpoint.id === over?.id);
+
+      const newSubpoints = arrayMove(section.subpoints, oldIndex, newIndex);
+      onReorderSubpoints(section.id, newSubpoints);
+    }
+  };
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -50,7 +86,7 @@ export const Section: React.FC<SectionProps> = ({
       {...attributes}
     >
       <div className="flex items-center mb-3">
-        {isDraggable && level === 0 && (
+        {isDraggable && (level === 0 || level === 1) && (
           <div 
             className="cursor-grab active:cursor-grabbing mr-2 p-1 hover:bg-accent-1 hover:bg-opacity-20 rounded"
             {...listeners}
@@ -81,16 +117,33 @@ export const Section: React.FC<SectionProps> = ({
 
       {section.subpoints.length > 0 && (
         <div className="ml-6 space-y-3">
-          {section.subpoints.map((subpoint) => (
-            <Section
-              key={subpoint.id}
-              section={subpoint as SectionType}
-              updateSectionVisibility={updateSectionVisibility}
-              updateSubpointVisibility={updateSubpointVisibility}
-              isDraggable={false} // Subpoints are not draggable across main sections
-              level={level + 1}
-            />
-          ))}
+          {level === 0 && section.subpoints.length > 1 && (
+            <div className="text-xs text-yellow-400 bg-yellow-900 bg-opacity-10 p-1 rounded mb-2">
+              Træk undermapper for at ændre rækkefølge
+            </div>
+          )}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleSubpointDragEnd}
+          >
+            <SortableContext 
+              items={section.subpoints.map(s => s.id)} 
+              strategy={verticalListSortingStrategy}
+            >
+              {section.subpoints.map((subpoint) => (
+                <Section
+                  key={subpoint.id}
+                  section={subpoint as SectionType}
+                  updateSectionVisibility={updateSectionVisibility}
+                  updateSubpointVisibility={updateSubpointVisibility}
+                  isDraggable={level === 0} // Only first-level subpoints are draggable
+                  level={level + 1}
+                  onReorderSubpoints={onReorderSubpoints}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       )}
     </div>
