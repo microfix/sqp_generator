@@ -43,47 +43,45 @@ export const processUploadedFilesForEdge = (files: File[]): FolderStructureType 
       }
       pathMap.get(defaultSectionTitle)!.files.push(file);
     } else if (pathParts.length >= 2) {
-      // File with folder structure
-      const topLevelFolder = pathParts[0];
-      const secondLevelFolder = pathParts.length > 2 ? pathParts[1] : null;
+      // File with nested folder structure - handle unlimited levels
+      const fileName = pathParts[pathParts.length - 1];
+      const folderPath = pathParts.slice(0, -1); // Remove filename
       
-      // Create main section if it doesn't exist
-      if (!pathMap.has(topLevelFolder)) {
-        const sectionId = generateId();
-        const section = {
-          id: sectionId,
-          title: topLevelFolder,
-          files: [],
-          subpoints: [],
-          showInToc: true
-        };
-        folderStructure.sections.push(section);
-        pathMap.set(topLevelFolder, section);
-      }
+      let currentContainer = folderStructure.sections;
+      let currentPath = '';
       
-      const section = pathMap.get(topLevelFolder);
-      
-      // If there's a subfolder, create the subpoint
-      if (secondLevelFolder && pathParts.length > 2) {
-        const subpointKey = `${topLevelFolder}/${secondLevelFolder}`;
+      // Navigate/create the nested structure
+      for (let i = 0; i < folderPath.length; i++) {
+        const folderName = folderPath[i];
+        currentPath += (currentPath ? '/' : '') + folderName;
         
-        if (!pathMap.has(subpointKey)) {
-          const subpointId = generateId();
-          const subpoint = {
-            id: subpointId,
-            title: secondLevelFolder,
+        // Find existing container at this level
+        let foundContainer = currentContainer.find(item => item.title === folderName);
+        
+        if (!foundContainer) {
+          // Create new container
+          const containerId = generateId();
+          const newContainer = {
+            id: containerId,
+            title: folderName,
             files: [],
-            showInToc: true
+            subpoints: [],
+            showInToc: true,
+            level: i
           };
-          section.subpoints.push(subpoint);
-          pathMap.set(subpointKey, subpoint);
+          
+          currentContainer.push(newContainer);
+          foundContainer = newContainer;
+          pathMap.set(currentPath, foundContainer);
         }
         
-        const subpoint = pathMap.get(subpointKey);
-        subpoint.files.push(file);
-      } else {
-        // File directly in the main folder
-        section.files.push(file);
+        // Move to subpoints for next level (except for top-level sections)
+        if (i < folderPath.length - 1) {
+          currentContainer = foundContainer.subpoints;
+        } else {
+          // This is the final container for the file
+          foundContainer.files.push(file);
+        }
       }
     }
   });
@@ -295,17 +293,17 @@ export const generatePDF = async (
     const tocStartPage = currentPage;
     currentPage++;
     
-    // Process each section and its files/subpoints
-    for (const section of folderStructure.sections) {
+    // Recursive function to process nested structure
+    const processNestedSection = async (section: any, level: number = 0) => {
       const sectionStartPage = currentPage;
       tocEntries.push({ 
         title: section.title, 
         page: sectionStartPage, 
-        level: 0, 
+        level: level, 
         showPage: section.showInToc 
       });
       
-      // Add files directly in the section
+      // Add files in this section
       for (const file of section.files) {
         if (file.type === 'application/pdf') {
           const fileBytes = await readFileAsArrayBuffer(file);
@@ -319,30 +317,15 @@ export const generatePDF = async (
         }
       }
       
-      // Process subpoints
+      // Recursively process all subpoints
       for (const subpoint of section.subpoints) {
-        const subpointStartPage = currentPage;
-        tocEntries.push({ 
-          title: subpoint.title, 
-          page: subpointStartPage, 
-          level: 1, 
-          showPage: subpoint.showInToc 
-        });
-        
-        // Add files in the subpoint
-        for (const file of subpoint.files) {
-          if (file.type === 'application/pdf') {
-            const fileBytes = await readFileAsArrayBuffer(file);
-            const pdf = await PDFDocument.load(new Uint8Array(fileBytes));
-            const pages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
-            pages.forEach(page => pdfDoc.addPage(page));
-            currentPage += pages.length;
-          } else if (file.type === 'image/jpeg') {
-            await convertJpegToPdfPage(file, pdfDoc);
-            currentPage++;
-          }
-        }
+        await processNestedSection(subpoint, level + 1);
       }
+    };
+
+    // Process all top-level sections
+    for (const section of folderStructure.sections) {
+      await processNestedSection(section, 0);
     }
     
     // Calculate total number of pages
