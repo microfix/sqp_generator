@@ -11,6 +11,16 @@ export const processUploadedFilesForEdge = (files: File[]): FolderStructureType 
   
   console.log('Processing files for Edge:', files.length);
   
+  // Sort files by path to ensure consistent processing order
+  files.sort((a, b) => {
+    const pathA = (a as any).path || a.name;
+    const pathB = (b as any).path || b.name;
+    return pathA.localeCompare(pathB, undefined, { 
+      numeric: true, 
+      sensitivity: 'base' 
+    });
+  });
+  
   files.forEach(file => {
     // @ts-ignore - webkitRelativePath exists but is not in TypeScript definitions
     const relativePath = file.webkitRelativePath || file.name;
