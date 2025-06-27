@@ -1,22 +1,66 @@
 import React from "react";
 import { Subpoint } from "./Subpoint";
 import { SectionType } from "@/lib/types";
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical } from 'lucide-react';
 
 interface SectionProps {
   section: SectionType;
   updateSectionVisibility: (sectionId: string, visible: boolean) => void;
   updateSubpointVisibility: (sectionId: string, subpointId: string, visible: boolean) => void;
+  isDraggable?: boolean;
+  level?: number;
 }
 
 export const Section: React.FC<SectionProps> = ({ 
   section, 
   updateSectionVisibility,
-  updateSubpointVisibility 
+  updateSubpointVisibility,
+  isDraggable = false,
+  level = 0
 }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ 
+    id: section.id,
+    disabled: !isDraggable || level > 0 // Only allow dragging main sections
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const indent = level * 20;
+
   return (
-    <div className="folder-section p-4 rounded-md border border-accent-1 bg-black bg-opacity-70 hover:translate-x-1 transition-transform duration-200">
+    <div 
+      ref={setNodeRef}
+      style={style}
+      className={`folder-section p-4 rounded-md border border-accent-1 bg-black bg-opacity-70 transition-transform duration-200 ${
+        isDragging ? 'z-50' : 'hover:translate-x-1'
+      }`}
+      {...attributes}
+    >
       <div className="flex items-center mb-3">
-        <h3 className="text-xl font-bold mr-3 m-0">{section.title}</h3>
+        {isDraggable && level === 0 && (
+          <div 
+            className="cursor-grab active:cursor-grabbing mr-2 p-1 hover:bg-accent-1 hover:bg-opacity-20 rounded"
+            {...listeners}
+          >
+            <GripVertical className="w-4 h-4 text-accent-1" />
+          </div>
+        )}
+        <h3 className={`font-bold mr-3 m-0 ${level === 0 ? 'text-xl' : 'text-lg'}`} style={{ marginLeft: `${indent}px` }}>
+          {section.title}
+        </h3>
         <input
           type="checkbox"
           id={`show-pages-${section.id}`}
@@ -38,11 +82,13 @@ export const Section: React.FC<SectionProps> = ({
       {section.subpoints.length > 0 && (
         <div className="ml-6 space-y-3">
           {section.subpoints.map((subpoint) => (
-            <Subpoint
+            <Section
               key={subpoint.id}
-              subpoint={subpoint}
-              sectionId={section.id}
+              section={subpoint as SectionType}
+              updateSectionVisibility={updateSectionVisibility}
               updateSubpointVisibility={updateSubpointVisibility}
+              isDraggable={false} // Subpoints are not draggable across main sections
+              level={level + 1}
             />
           ))}
         </div>
