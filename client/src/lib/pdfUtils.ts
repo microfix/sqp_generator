@@ -404,18 +404,17 @@ export const generatePDF = async (
             try {
               const fileBytes = await readFileAsArrayBuffer(file);
               
-              // KORREKT: Brug embedPdf til at embedde hele PDF'en
-              const [embeddedPages] = await pdfDoc.embedPdf(new Uint8Array(fileBytes));
+              // KORREKT: embedPdf returnerer array af embeddedPages direkte
+              const embeddedPages = await pdfDoc.embedPdf(new Uint8Array(fileBytes));
               
               // Process hver embedded page
-              for (let i = 0; i < embeddedPages.length; i++) {
+              for (const embeddedPage of embeddedPages) {
                 try {
-                  const embeddedPage = embeddedPages[i];
-                  const { width: pageWidth, height: pageHeight } = embeddedPage.size;
+                  const { width: pageWidth, height: pageHeight } = embeddedPage;
                   
                   // Skip empty or invalid pages
                   if (pageWidth <= 0 || pageHeight <= 0) {
-                    console.warn(`Skipping invalid page ${i + 1} from ${file.name}`);
+                    console.warn(`Skipping invalid page from ${file.name}`);
                     continue;
                   }
                   
@@ -441,7 +440,7 @@ export const generatePDF = async (
                   
                   currentPage++;
                 } catch (pageError) {
-                  console.error(`Error processing page ${i + 1} from ${file.name}:`, pageError);
+                  console.error(`Error processing page from ${file.name}:`, pageError);
                   // Skip problematic page and continue
                   continue;
                 }
@@ -451,9 +450,78 @@ export const generatePDF = async (
               // Skip entire PDF if embedding fails
               continue;
             }
-          } else if (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png') {
-            await convertImageToPdfPage(file, pdfDoc);
-            currentPage++;
+          } else if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+            // Håndter JPEG billeder
+            try {
+              const A4_WIDTH = 595;
+              const A4_HEIGHT = 842;
+              const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
+              const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
+              
+              const imageBytes = await readFileAsArrayBuffer(file);
+              const image = await pdfDoc.embedJpg(new Uint8Array(imageBytes));
+              const { width: originalWidth, height: originalHeight } = image;
+              
+              // Beregn skalering til max 90% af A4
+              const scale = Math.min(MAX_WIDTH / originalWidth, MAX_HEIGHT / originalHeight);
+              const newWidth = originalWidth * scale;
+              const newHeight = originalHeight * scale;
+              
+              // Centreringskoordinater
+              const x = (A4_WIDTH - newWidth) / 2;
+              const y = (A4_HEIGHT - newHeight) / 2;
+              
+              // Opret A4-side og tegn billede
+              const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
+              page.drawImage(image, {
+                x,
+                y,
+                width: newWidth,
+                height: newHeight,
+              });
+              
+              currentPage++;
+            } catch (imageError) {
+              console.error(`Error processing JPEG ${file.name}:`, imageError);
+              continue;
+            }
+          } else if (file.type === 'image/png') {
+            // Håndter PNG billeder
+            try {
+              const A4_WIDTH = 595;
+              const A4_HEIGHT = 842;
+              const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
+              const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
+              
+              const imageBytes = await readFileAsArrayBuffer(file);
+              const image = await pdfDoc.embedPng(new Uint8Array(imageBytes));
+              const { width: originalWidth, height: originalHeight } = image;
+              
+              // Beregn skalering til max 90% af A4
+              const scale = Math.min(MAX_WIDTH / originalWidth, MAX_HEIGHT / originalHeight);
+              const newWidth = originalWidth * scale;
+              const newHeight = originalHeight * scale;
+              
+              // Centreringskoordinater
+              const x = (A4_WIDTH - newWidth) / 2;
+              const y = (A4_HEIGHT - newHeight) / 2;
+              
+              // Opret A4-side og tegn billede
+              const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
+              page.drawImage(image, {
+                x,
+                y,
+                width: newWidth,
+                height: newHeight,
+              });
+              
+              currentPage++;
+            } catch (imageError) {
+              console.error(`Error processing PNG ${file.name}:`, imageError);
+              continue;
+            }
+          } else {
+            console.warn(`Unsupported file type: ${file.type} for file ${file.name}`);
           }
         } catch (fileError) {
           console.error(`Error processing file ${file.name}:`, fileError);
