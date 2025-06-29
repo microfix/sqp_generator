@@ -421,6 +421,28 @@ export default function PDFGenerator() {
           </div>
         </div>
         
+        {/* Smart Text Placement Toggle */}
+        <div className="mb-6 p-4 rounded-md border border-accent-1 bg-black bg-opacity-30">
+          <div className="flex items-center space-x-3">
+            <Switch
+              id="smart-placement"
+              checked={smartTextPlacement}
+              onCheckedChange={setSmartTextPlacement}
+            />
+            <div className="flex-1">
+              <Label htmlFor="smart-placement" className="text-sm font-medium cursor-pointer">
+                Smart tekstplacering
+              </Label>
+              <p className="text-xs text-opacity-70 text-primary-2 mt-1">
+                {smartTextPlacement 
+                  ? "🔄 Scanner sideorientering og placerer sidetal/dokumentnummer korrekt for både portrait og landscape sider"
+                  : "📍 Standard placering - sidetal og dokumentnummer i fast position (kan være forkert på roterede sider)"
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+        
         {/* Generate Button */}
         <div className="text-center">
           <button 
