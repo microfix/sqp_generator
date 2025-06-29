@@ -246,15 +246,23 @@ const convertJpegToPdfPage = async (jpegFile: File, pdfDoc: PDFDocument): Promis
   return page;
 };
 
-// Function to convert PNG to PDF page with A4 scaling and centering
-const convertPngToPdfPage = async (pngFile: File, pdfDoc: PDFDocument): Promise<PDFPage> => {
+// Function to handle PNG images (uses embedPng for PNG files)
+const convertImageToPdfPage = async (imageFile: File, pdfDoc: PDFDocument): Promise<PDFPage> => {
   const A4_WIDTH = 595;
   const A4_HEIGHT = 842;
   const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
   const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
   
-  const imageBytes = await readFileAsArrayBuffer(pngFile);
-  const image = await pdfDoc.embedPng(new Uint8Array(imageBytes));
+  const imageBytes = await readFileAsArrayBuffer(imageFile);
+  
+  // Detect and embed correct image type
+  let image;
+  if (imageFile.type === 'image/png') {
+    image = await pdfDoc.embedPng(new Uint8Array(imageBytes));
+  } else {
+    image = await pdfDoc.embedJpg(new Uint8Array(imageBytes));
+  }
+  
   const { width: originalWidth, height: originalHeight } = image.scale(1);
   
   // Beregn skaleringsfaktor for indhold
@@ -393,56 +401,58 @@ export const generatePDF = async (
             const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
             const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
             
-            const fileBytes = await readFileAsArrayBuffer(file);
-            const sourcePdf = await PDFDocument.load(new Uint8Array(fileBytes));
-            const pageCount = sourcePdf.getPageCount();
-            
-            // Process each page from source PDF
-            for (let i = 0; i < pageCount; i++) {
-              try {
-                const [sourcePage] = await pdfDoc.copyPages(sourcePdf, [i]);
-                const { width: originalWidth, height: originalHeight } = sourcePage.getSize();
-                
-                // Skip empty or invalid pages
-                if (originalWidth <= 0 || originalHeight <= 0) {
-                  console.warn(`Skipping invalid page ${i + 1} from ${file.name}`);
+            try {
+              const fileBytes = await readFileAsArrayBuffer(file);
+              
+              // KORREKT: Brug embedPdf til at embedde hele PDF'en
+              const [embeddedPages] = await pdfDoc.embedPdf(new Uint8Array(fileBytes));
+              
+              // Process hver embedded page
+              for (let i = 0; i < embeddedPages.length; i++) {
+                try {
+                  const embeddedPage = embeddedPages[i];
+                  const { width: pageWidth, height: pageHeight } = embeddedPage.size;
+                  
+                  // Skip empty or invalid pages
+                  if (pageWidth <= 0 || pageHeight <= 0) {
+                    console.warn(`Skipping invalid page ${i + 1} from ${file.name}`);
+                    continue;
+                  }
+                  
+                  // Skalering til max 90% af A4
+                  const scale = Math.min(MAX_WIDTH / pageWidth, MAX_HEIGHT / pageHeight);
+                  const drawWidth = pageWidth * scale;
+                  const drawHeight = pageHeight * scale;
+                  
+                  // Centreringskoordinater på A4
+                  const x = (A4_WIDTH - drawWidth) / 2;
+                  const y = (A4_HEIGHT - drawHeight) / 2;
+                  
+                  // Tilføj ny A4-side til output
+                  const newPage = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
+                  
+                  // Tegn embedded page centreret og skaleret
+                  newPage.drawPage(embeddedPage, {
+                    x,
+                    y,
+                    xScale: scale,
+                    yScale: scale,
+                  });
+                  
+                  currentPage++;
+                } catch (pageError) {
+                  console.error(`Error processing page ${i + 1} from ${file.name}:`, pageError);
+                  // Skip problematic page and continue
                   continue;
                 }
-                
-                // Beregn skaleringsfaktor for indhold - max 90% af A4
-                const scale = Math.min(MAX_WIDTH / originalWidth, MAX_HEIGHT / originalHeight);
-                
-                // Nye dimensioner på siden
-                const newWidth = originalWidth * scale;
-                const newHeight = originalHeight * scale;
-                
-                // Centreringskoordinater på A4
-                const x = (A4_WIDTH - newWidth) / 2;
-                const y = (A4_HEIGHT - newHeight) / 2;
-                
-                // Opret ny A4-side
-                const newPage = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
-                
-                // Tegn source side direkte centreret og skaleret (INGEN embedPage nødvendig)
-                newPage.drawPage(sourcePage, {
-                  x,
-                  y,
-                  xScale: scale,
-                  yScale: scale,
-                });
-                
-                currentPage++;
-              } catch (pageError) {
-                console.error(`Error processing page ${i + 1} from ${file.name}:`, pageError);
-                // Skip problematic page and continue
-                continue;
               }
+            } catch (pdfError) {
+              console.error(`Error embedding PDF ${file.name}:`, pdfError);
+              // Skip entire PDF if embedding fails
+              continue;
             }
-          } else if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
-            await convertJpegToPdfPage(file, pdfDoc);
-            currentPage++;
-          } else if (file.type === 'image/png') {
-            await convertPngToPdfPage(file, pdfDoc);
+          } else if (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png') {
+            await convertImageToPdfPage(file, pdfDoc);
             currentPage++;
           }
         } catch (fileError) {
