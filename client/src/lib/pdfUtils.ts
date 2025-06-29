@@ -351,12 +351,15 @@ export const generatePDF = async (
             
             // If smart text placement is enabled, force all pages to portrait orientation  
             if (smartTextPlacement && width > height) {
-              // For landscape pages, draw rotated content
+              // For landscape pages, draw rotated content to fit in portrait
+              const scaledWidth = 595.28 * scale;
+              const scaledHeight = 841.89 * scale;
+              
               newPage.drawPage(page, {
-                x: marginX + (595.28 * scale) / 2,
-                y: marginY + (841.89 * scale) / 2,
-                xScale: scale * (841.89 * scale) / width,
-                yScale: scale * (595.28 * scale) / height,
+                x: marginX + scaledWidth,
+                y: marginY,
+                xScale: scaledWidth / width,
+                yScale: scaledHeight / height,
                 rotate: degrees(90)
               });
               console.log(`Rotated and scaled landscape page (${width}x${height})`);
