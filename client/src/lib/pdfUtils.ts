@@ -246,6 +246,42 @@ const convertJpegToPdfPage = async (jpegFile: File, pdfDoc: PDFDocument): Promis
   return page;
 };
 
+// Function to convert PNG to PDF page with A4 scaling and centering
+const convertPngToPdfPage = async (pngFile: File, pdfDoc: PDFDocument): Promise<PDFPage> => {
+  const A4_WIDTH = 595;
+  const A4_HEIGHT = 842;
+  const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
+  const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
+  
+  const imageBytes = await readFileAsArrayBuffer(pngFile);
+  const image = await pdfDoc.embedPng(new Uint8Array(imageBytes));
+  const { width: originalWidth, height: originalHeight } = image.scale(1);
+  
+  // Beregn skaleringsfaktor for indhold
+  const scale = Math.min(MAX_WIDTH / originalWidth, MAX_HEIGHT / originalHeight);
+  
+  // Nye dimensioner på siden
+  const newWidth = originalWidth * scale;
+  const newHeight = originalHeight * scale;
+  
+  // Centreringskoordinater
+  const x = (A4_WIDTH - newWidth) / 2;
+  const y = (A4_HEIGHT - newHeight) / 2;
+  
+  // Opret A4-side
+  const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
+  
+  // Tegn billede centreret og skaleret
+  page.drawImage(image, {
+    x,
+    y,
+    width: newWidth,
+    height: newHeight,
+  });
+  
+  return page;
+};
+
 // Main function to generate the combined PDF
 export const generatePDF = async (
   coverFile: File | null,
@@ -350,50 +386,69 @@ export const generatePDF = async (
       
       // First: Add files in this section (files in current folder come first)
       for (const file of section.files) {
-        if (file.type === 'application/pdf') {
-          const A4_WIDTH = 595;
-          const A4_HEIGHT = 842;
-          const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
-          const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
-          
-          const fileBytes = await readFileAsArrayBuffer(file);
-          const pdf = await PDFDocument.load(new Uint8Array(fileBytes));
-          const sourcePages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
-          
-          // Process each source page with proper async/await for embedding
-          for (const sourcePage of sourcePages) {
-            const { width: originalWidth, height: originalHeight } = sourcePage.getSize();
+        try {
+          if (file.type === 'application/pdf') {
+            const A4_WIDTH = 595;
+            const A4_HEIGHT = 842;
+            const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
+            const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
             
-            // KRITISK: SKAL await embedPage - ellers får vi TypeError
-            const embeddedPage = await pdfDoc.embedPage(sourcePage);
+            const fileBytes = await readFileAsArrayBuffer(file);
+            const sourcePdf = await PDFDocument.load(new Uint8Array(fileBytes));
+            const pageCount = sourcePdf.getPageCount();
             
-            // Beregn skaleringsfaktor for indhold - max 90% af A4
-            const scale = Math.min(MAX_WIDTH / originalWidth, MAX_HEIGHT / originalHeight);
-            
-            // Nye dimensioner på siden
-            const newWidth = originalWidth * scale;
-            const newHeight = originalHeight * scale;
-            
-            // Centreringskoordinater på A4
-            const x = (A4_WIDTH - newWidth) / 2;
-            const y = (A4_HEIGHT - newHeight) / 2;
-            
-            // Opret ny A4-side
-            const newPage = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
-            
-            // Tegn embedded side centreret og skaleret (INGEN rotation)
-            newPage.drawPage(embeddedPage, {
-              x,
-              y,
-              xScale: scale,
-              yScale: scale,
-            });
+            // Process each page from source PDF
+            for (let i = 0; i < pageCount; i++) {
+              try {
+                const [sourcePage] = await pdfDoc.copyPages(sourcePdf, [i]);
+                const { width: originalWidth, height: originalHeight } = sourcePage.getSize();
+                
+                // Skip empty or invalid pages
+                if (originalWidth <= 0 || originalHeight <= 0) {
+                  console.warn(`Skipping invalid page ${i + 1} from ${file.name}`);
+                  continue;
+                }
+                
+                // Beregn skaleringsfaktor for indhold - max 90% af A4
+                const scale = Math.min(MAX_WIDTH / originalWidth, MAX_HEIGHT / originalHeight);
+                
+                // Nye dimensioner på siden
+                const newWidth = originalWidth * scale;
+                const newHeight = originalHeight * scale;
+                
+                // Centreringskoordinater på A4
+                const x = (A4_WIDTH - newWidth) / 2;
+                const y = (A4_HEIGHT - newHeight) / 2;
+                
+                // Opret ny A4-side
+                const newPage = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
+                
+                // Tegn source side direkte centreret og skaleret (INGEN embedPage nødvendig)
+                newPage.drawPage(sourcePage, {
+                  x,
+                  y,
+                  xScale: scale,
+                  yScale: scale,
+                });
+                
+                currentPage++;
+              } catch (pageError) {
+                console.error(`Error processing page ${i + 1} from ${file.name}:`, pageError);
+                // Skip problematic page and continue
+                continue;
+              }
+            }
+          } else if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+            await convertJpegToPdfPage(file, pdfDoc);
+            currentPage++;
+          } else if (file.type === 'image/png') {
+            await convertPngToPdfPage(file, pdfDoc);
+            currentPage++;
           }
-          
-          currentPage += sourcePages.length;
-        } else if (file.type === 'image/jpeg') {
-          await convertJpegToPdfPage(file, pdfDoc);
-          currentPage++;
+        } catch (fileError) {
+          console.error(`Error processing file ${file.name}:`, fileError);
+          // Skip problematic file and continue with next
+          continue;
         }
       }
       
