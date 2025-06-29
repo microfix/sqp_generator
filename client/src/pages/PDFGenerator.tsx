@@ -166,6 +166,7 @@ export default function PDFGenerator() {
     }
 
     setIsGenerating(true);
+    console.log('Smart text placement is:', smartTextPlacement);
     try {
       await generatePDF(
         coverFile, 

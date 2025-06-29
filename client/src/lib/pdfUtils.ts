@@ -340,18 +340,18 @@ export const generatePDF = async (
           const pdf = await PDFDocument.load(new Uint8Array(fileBytes));
           const pages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
           
-          pages.forEach(page => {
+          for (const page of pages) {
             const { width, height } = page.getSize();
             
-            // If smart text placement is enabled, force all pages to portrait orientation
+            // If smart text placement is enabled, force all pages to portrait orientation  
             if (smartTextPlacement && width > height) {
-              // Simple rotation: rotate landscape pages 90 degrees to make them portrait
+              // Rotate landscape pages 90 degrees to make them portrait
               page.setRotation(degrees(90));
               console.log(`Rotated landscape page to portrait (${width}x${height})`);
             }
             
             pdfDoc.addPage(page);
-          });
+          };
           
           currentPage += pages.length;
         } else if (file.type === 'image/jpeg') {
