@@ -10,6 +10,8 @@ import { HelpDialog } from "@/components/HelpDialog";
 import { useQuery } from "@tanstack/react-query";
 import { BuildingProject } from "@shared/schema";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export default function PDFGenerator() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -20,6 +22,7 @@ export default function PDFGenerator() {
   const [documentNumberCenter, setDocumentNumberCenter] = useState<string>("");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [smartTextPlacement, setSmartTextPlacement] = useState<boolean>(false);
   
   const coverInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -163,13 +166,15 @@ export default function PDFGenerator() {
     }
 
     setIsGenerating(true);
+    console.log('Smart text placement is:', smartTextPlacement);
     try {
       await generatePDF(
         coverFile, 
         folderStructure, 
         pdfName, 
         documentNumberLeft,
-        documentNumberCenter
+        documentNumberCenter,
+        smartTextPlacement
       );
       toast({
         title: "PDF genereret",
@@ -415,6 +420,28 @@ export default function PDFGenerator() {
               className="p-2 rounded-md w-full bg-opacity-10 bg-white border border-accent-1" 
               placeholder="Vises i toppen i midten"
             />
+          </div>
+        </div>
+        
+        {/* Smart Text Placement Toggle */}
+        <div className="mb-6 p-4 rounded-md border border-accent-1 bg-black bg-opacity-30">
+          <div className="flex items-center space-x-3">
+            <Switch
+              id="smart-placement"
+              checked={smartTextPlacement}
+              onCheckedChange={setSmartTextPlacement}
+            />
+            <div className="flex-1">
+              <Label htmlFor="smart-placement" className="text-sm font-medium cursor-pointer">
+                Smart tekstplacering
+              </Label>
+              <p className="text-xs text-opacity-70 text-primary-2 mt-1">
+                {smartTextPlacement 
+                  ? "🔄 Scanner sideorientering og placerer sidetal/dokumentnummer korrekt for både portrait og landscape sider"
+                  : "📍 Standard placering - sidetal og dokumentnummer i fast position (kan være forkert på roterede sider)"
+                }
+              </p>
+            </div>
           </div>
         </div>
         

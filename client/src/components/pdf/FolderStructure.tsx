@@ -63,7 +63,7 @@ export const FolderStructure: React.FC<FolderStructureProps> = ({
   return (
     <div className="my-6 p-4 rounded-md border border-accent-1 bg-opacity-50 bg-black min-h-[100px]">
       <div className="mb-3 text-sm text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 rounded">
-        <strong>Træk og slip:</strong> Træk hovedmapper op/ned for at ændre rækkefølge i indholdsfortegnelsen
+        <strong>Træk og slip:</strong> Træk hovedmapper op/ned for at ændre rækkefølge
       </div>
       <DndContext
         sensors={sensors}

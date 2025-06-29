@@ -1,5 +1,5 @@
 import { FolderStructureType } from "./types";
-import { PDFDocument, StandardFonts, rgb, PDFPage } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, PDFPage, degrees } from "pdf-lib";
 
 // Function to generate a unique ID
 export const generateId = (): string => '_' + Math.random().toString(36).substr(2, 9);
@@ -210,81 +210,21 @@ const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
   });
 };
 
-// Function to convert JPEG to PDF page with A4 scaling and centering
+// Function to convert JPEG to PDF page
 const convertJpegToPdfPage = async (jpegFile: File, pdfDoc: PDFDocument): Promise<PDFPage> => {
-  const A4_WIDTH = 595;
-  const A4_HEIGHT = 842;
-  const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
-  const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
-  
   const imageBytes = await readFileAsArrayBuffer(jpegFile);
   const image = await pdfDoc.embedJpg(new Uint8Array(imageBytes));
-  const { width: originalWidth, height: originalHeight } = image.scale(1);
+  const imageDims = image.scale(1);
   
-  // Beregn skaleringsfaktor for indhold
-  const scale = Math.min(MAX_WIDTH / originalWidth, MAX_HEIGHT / originalHeight);
+  // Create a page with the same dimensions as the image
+  const page = pdfDoc.addPage([imageDims.width, imageDims.height]);
   
-  // Nye dimensioner på siden
-  const newWidth = originalWidth * scale;
-  const newHeight = originalHeight * scale;
-  
-  // Centreringskoordinater
-  const x = (A4_WIDTH - newWidth) / 2;
-  const y = (A4_HEIGHT - newHeight) / 2;
-  
-  // Opret A4-side
-  const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
-  
-  // Tegn billede centreret og skaleret
+  // Draw the image to fill the page
   page.drawImage(image, {
-    x,
-    y,
-    width: newWidth,
-    height: newHeight,
-  });
-  
-  return page;
-};
-
-// Function to handle PNG images (uses embedPng for PNG files)
-const convertImageToPdfPage = async (imageFile: File, pdfDoc: PDFDocument): Promise<PDFPage> => {
-  const A4_WIDTH = 595;
-  const A4_HEIGHT = 842;
-  const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
-  const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
-  
-  const imageBytes = await readFileAsArrayBuffer(imageFile);
-  
-  // Detect and embed correct image type
-  let image;
-  if (imageFile.type === 'image/png') {
-    image = await pdfDoc.embedPng(new Uint8Array(imageBytes));
-  } else {
-    image = await pdfDoc.embedJpg(new Uint8Array(imageBytes));
-  }
-  
-  const { width: originalWidth, height: originalHeight } = image.scale(1);
-  
-  // Beregn skaleringsfaktor for indhold
-  const scale = Math.min(MAX_WIDTH / originalWidth, MAX_HEIGHT / originalHeight);
-  
-  // Nye dimensioner på siden
-  const newWidth = originalWidth * scale;
-  const newHeight = originalHeight * scale;
-  
-  // Centreringskoordinater
-  const x = (A4_WIDTH - newWidth) / 2;
-  const y = (A4_HEIGHT - newHeight) / 2;
-  
-  // Opret A4-side
-  const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
-  
-  // Tegn billede centreret og skaleret
-  page.drawImage(image, {
-    x,
-    y,
-    width: newWidth,
-    height: newHeight,
+    x: 0,
+    y: 0,
+    width: imageDims.width,
+    height: imageDims.height,
   });
   
   return page;
@@ -296,7 +236,8 @@ export const generatePDF = async (
   folderStructure: FolderStructureType,
   outputName: string,
   documentNumberLeft: string = "",
-  documentNumberCenter: string = ""
+  documentNumberCenter: string = "",
+  smartTextPlacement: boolean = false
 ): Promise<void> => {
   try {
     // Create a new PDF document
@@ -394,139 +335,69 @@ export const generatePDF = async (
       
       // First: Add files in this section (files in current folder come first)
       for (const file of section.files) {
-        try {
-          if (file.type === 'application/pdf') {
-            const A4_WIDTH = 595;
-            const A4_HEIGHT = 842;
-            const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
-            const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
+        if (file.type === 'application/pdf') {
+          const fileBytes = await readFileAsArrayBuffer(file);
+          const pdf = await PDFDocument.load(new Uint8Array(fileBytes));
+          const pages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
+          
+          // Process each page: scale to 90% and center on A4, rotate landscape if toggle is on
+          for (const page of pages) {
+            const { width, height } = page.getSize();
+            const isLandscape = width > height;
             
-            try {
-              const fileBytes = await readFileAsArrayBuffer(file);
+            // Create new A4 portrait page
+            const newPage = pdfDoc.addPage([595.28, 841.89]);
+            const scale = 0.9;
+            const a4Width = 595.28;
+            const a4Height = 841.89;
+            
+            if (smartTextPlacement && isLandscape) {
+              // Rotate landscape to portrait: swap dimensions for calculation
+              const scaledWidth = a4Width * scale;
+              const scaledHeight = a4Height * scale;
+              const aspectRatio = Math.min(scaledHeight / width, scaledWidth / height);
               
-              // KORREKT: embedPdf returnerer array af embeddedPages direkte
-              const embeddedPages = await pdfDoc.embedPdf(new Uint8Array(fileBytes));
+              const finalWidth = width * aspectRatio;
+              const finalHeight = height * aspectRatio;
               
-              // Process hver embedded page
-              for (const embeddedPage of embeddedPages) {
-                try {
-                  const { width: pageWidth, height: pageHeight } = embeddedPage;
-                  
-                  // Skip empty or invalid pages
-                  if (pageWidth <= 0 || pageHeight <= 0) {
-                    console.warn(`Skipping invalid page from ${file.name}`);
-                    continue;
-                  }
-                  
-                  // Skalering til max 90% af A4
-                  const scale = Math.min(MAX_WIDTH / pageWidth, MAX_HEIGHT / pageHeight);
-                  const drawWidth = pageWidth * scale;
-                  const drawHeight = pageHeight * scale;
-                  
-                  // Centreringskoordinater på A4
-                  const x = (A4_WIDTH - drawWidth) / 2;
-                  const y = (A4_HEIGHT - drawHeight) / 2;
-                  
-                  // Tilføj ny A4-side til output
-                  const newPage = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
-                  
-                  // Tegn embedded page centreret og skaleret
-                  newPage.drawPage(embeddedPage, {
-                    x,
-                    y,
-                    xScale: scale,
-                    yScale: scale,
-                  });
-                  
-                  currentPage++;
-                } catch (pageError) {
-                  console.error(`Error processing page from ${file.name}:`, pageError);
-                  // Skip problematic page and continue
-                  continue;
-                }
-              }
-            } catch (pdfError) {
-              console.error(`Error embedding PDF ${file.name}:`, pdfError);
-              // Skip entire PDF if embedding fails
-              continue;
-            }
-          } else if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
-            // Håndter JPEG billeder
-            try {
-              const A4_WIDTH = 595;
-              const A4_HEIGHT = 842;
-              const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
-              const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
+              // Center the rotated content
+              const offsetX = (a4Width - finalHeight) / 2;
+              const offsetY = (a4Height - finalWidth) / 2;
               
-              const imageBytes = await readFileAsArrayBuffer(file);
-              const image = await pdfDoc.embedJpg(new Uint8Array(imageBytes));
-              const { width: originalWidth, height: originalHeight } = image;
-              
-              // Beregn skalering til max 90% af A4
-              const scale = Math.min(MAX_WIDTH / originalWidth, MAX_HEIGHT / originalHeight);
-              const newWidth = originalWidth * scale;
-              const newHeight = originalHeight * scale;
-              
-              // Centreringskoordinater
-              const x = (A4_WIDTH - newWidth) / 2;
-              const y = (A4_HEIGHT - newHeight) / 2;
-              
-              // Opret A4-side og tegn billede
-              const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
-              page.drawImage(image, {
-                x,
-                y,
-                width: newWidth,
-                height: newHeight,
+              newPage.drawPage(page, {
+                x: offsetX + finalHeight,
+                y: offsetY,
+                xScale: aspectRatio,
+                yScale: aspectRatio,
+                rotate: degrees(90)
               });
+              console.log(`Rotated landscape ${width}x${height} to portrait`);
+            } else {
+              // Standard scaling to 90% and centering
+              const scaledWidth = a4Width * scale;
+              const scaledHeight = a4Height * scale;
+              const aspectRatio = Math.min(scaledWidth / width, scaledHeight / height);
               
-              currentPage++;
-            } catch (imageError) {
-              console.error(`Error processing JPEG ${file.name}:`, imageError);
-              continue;
-            }
-          } else if (file.type === 'image/png') {
-            // Håndter PNG billeder
-            try {
-              const A4_WIDTH = 595;
-              const A4_HEIGHT = 842;
-              const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
-              const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
+              const finalWidth = width * aspectRatio;
+              const finalHeight = height * aspectRatio;
               
-              const imageBytes = await readFileAsArrayBuffer(file);
-              const image = await pdfDoc.embedPng(new Uint8Array(imageBytes));
-              const { width: originalWidth, height: originalHeight } = image;
+              // Center on page
+              const offsetX = (a4Width - finalWidth) / 2;
+              const offsetY = (a4Height - finalHeight) / 2;
               
-              // Beregn skalering til max 90% af A4
-              const scale = Math.min(MAX_WIDTH / originalWidth, MAX_HEIGHT / originalHeight);
-              const newWidth = originalWidth * scale;
-              const newHeight = originalHeight * scale;
-              
-              // Centreringskoordinater
-              const x = (A4_WIDTH - newWidth) / 2;
-              const y = (A4_HEIGHT - newHeight) / 2;
-              
-              // Opret A4-side og tegn billede
-              const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
-              page.drawImage(image, {
-                x,
-                y,
-                width: newWidth,
-                height: newHeight,
+              newPage.drawPage(page, {
+                x: offsetX,
+                y: offsetY,
+                xScale: aspectRatio,
+                yScale: aspectRatio
               });
-              
-              currentPage++;
-            } catch (imageError) {
-              console.error(`Error processing PNG ${file.name}:`, imageError);
-              continue;
             }
-          } else {
-            console.warn(`Unsupported file type: ${file.type} for file ${file.name}`);
           }
-        } catch (fileError) {
-          console.error(`Error processing file ${file.name}:`, fileError);
-          // Skip problematic file and continue with next
-          continue;
+          
+          currentPage += pages.length;
+        } else if (file.type === 'image/jpeg') {
+          await convertJpegToPdfPage(file, pdfDoc);
+          currentPage++;
         }
       }
       
@@ -624,38 +495,80 @@ export const generatePDF = async (
       const page = pdfDoc.getPage(i);
       const { width, height } = page.getSize();
       
-      // Format: "Page X of Y" at bottom left
+      // Determine if this is a landscape page (width > height) when smart placement is enabled
+      const isLandscape = smartTextPlacement && width > height;
+      
+      console.log(`Page ${i + 1}: ${width}x${height}, isLandscape: ${isLandscape}, smartTextPlacement: ${smartTextPlacement}`);
+      
+      // Format: "Page X of Y"
       const pageText = `Page ${i + 1} of ${totalPages}`;
       
-      page.drawText(pageText, {
-        x: 50, // Left margin
-        y: 15, // Bottom margin (moved lower)
-        size: 10,
-        font: font,
-        color: rgb(0, 0, 0),
-      });
-      
-      // Add document number in left header if provided
-      if (documentNumberLeft) {
-        page.drawText(documentNumberLeft, {
+      if (smartTextPlacement && isLandscape) {
+        // For landscape pages: Place text considering the rotated content
+        // Bottom-right corner when viewed in landscape orientation
+        page.drawText(pageText, {
+          x: width - 15, // Right edge
+          y: 50, // Bottom with margin
+          size: 10,
+          font: font,
+          color: rgb(0, 0, 0),
+          rotate: degrees(90), // Rotate text to read correctly in landscape
+        });
+        
+        // Document numbers at top when viewed in landscape
+        if (documentNumberLeft) {
+          page.drawText(documentNumberLeft, {
+            x: 15, // Left edge  
+            y: 50, // Bottom with margin
+            size: 10,
+            font: font,
+            color: rgb(0, 0, 0),
+            rotate: degrees(90),
+          });
+        }
+        
+        if (documentNumberCenter) {
+          page.drawText(documentNumberCenter, {
+            x: 15, // Left edge
+            y: height / 2, // Center vertically
+            size: 10,
+            font: font,
+            color: rgb(0, 0, 0),
+            rotate: degrees(90),
+          });
+        }
+      } else {
+        // Standard positioning for portrait pages or when smart placement is disabled
+        page.drawText(pageText, {
           x: 50, // Left margin
-          y: height - 15, // Moved higher up (was -30)
+          y: 15, // Bottom margin
           size: 10,
           font: font,
           color: rgb(0, 0, 0),
         });
-      }
-      
-      // Add document number in right header if provided
-      if (documentNumberCenter) {
-        const textWidth = font.widthOfTextAtSize(documentNumberCenter, 10);
-        page.drawText(documentNumberCenter, {
-          x: width - textWidth - 50, // Right aligned with margin
-          y: height - 15, // Moved higher up (was -30)
-          size: 10,
-          font: font,
-          color: rgb(0, 0, 0),
-        });
+        
+        // Add document number in left header if provided
+        if (documentNumberLeft) {
+          page.drawText(documentNumberLeft, {
+            x: 50, // Left margin
+            y: height - 15, // Top margin
+            size: 10,
+            font: font,
+            color: rgb(0, 0, 0),
+          });
+        }
+        
+        // Add document number in center header if provided
+        if (documentNumberCenter) {
+          const textWidth = font.widthOfTextAtSize(documentNumberCenter, 10);
+          page.drawText(documentNumberCenter, {
+            x: (width - textWidth) / 2, // Centered
+            y: height - 15, // Top margin
+            size: 10,
+            font: font,
+            color: rgb(0, 0, 0),
+          });
+        }
       }
     }
     
