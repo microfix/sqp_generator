@@ -1,5 +1,5 @@
 import { FolderStructureType } from "./types";
-import { PDFDocument, StandardFonts, rgb, PDFPage } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, PDFPage, degrees } from "pdf-lib";
 
 // Function to generate a unique ID
 export const generateId = (): string => '_' + Math.random().toString(36).substr(2, 9);
