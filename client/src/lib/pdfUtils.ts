@@ -210,21 +210,37 @@ const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
   });
 };
 
-// Function to convert JPEG to PDF page
+// Function to convert JPEG to PDF page with A4 scaling and centering
 const convertJpegToPdfPage = async (jpegFile: File, pdfDoc: PDFDocument): Promise<PDFPage> => {
+  const A4_WIDTH = 595;
+  const A4_HEIGHT = 842;
+  const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
+  const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
+  
   const imageBytes = await readFileAsArrayBuffer(jpegFile);
   const image = await pdfDoc.embedJpg(new Uint8Array(imageBytes));
-  const imageDims = image.scale(1);
+  const { width: originalWidth, height: originalHeight } = image.scale(1);
   
-  // Create a page with the same dimensions as the image
-  const page = pdfDoc.addPage([imageDims.width, imageDims.height]);
+  // Beregn skaleringsfaktor for indhold
+  const scale = Math.min(MAX_WIDTH / originalWidth, MAX_HEIGHT / originalHeight);
   
-  // Draw the image to fill the page
+  // Nye dimensioner på siden
+  const newWidth = originalWidth * scale;
+  const newHeight = originalHeight * scale;
+  
+  // Centreringskoordinater
+  const x = (A4_WIDTH - newWidth) / 2;
+  const y = (A4_HEIGHT - newHeight) / 2;
+  
+  // Opret A4-side
+  const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
+  
+  // Tegn billede centreret og skaleret
   page.drawImage(image, {
-    x: 0,
-    y: 0,
-    width: imageDims.width,
-    height: imageDims.height,
+    x,
+    y,
+    width: newWidth,
+    height: newHeight,
   });
   
   return page;
@@ -335,11 +351,42 @@ export const generatePDF = async (
       // First: Add files in this section (files in current folder come first)
       for (const file of section.files) {
         if (file.type === 'application/pdf') {
+          const A4_WIDTH = 595;
+          const A4_HEIGHT = 842;
+          const MAX_WIDTH = A4_WIDTH * 0.9;  // 535 pt
+          const MAX_HEIGHT = A4_HEIGHT * 0.9; // 758 pt
+          
           const fileBytes = await readFileAsArrayBuffer(file);
           const pdf = await PDFDocument.load(new Uint8Array(fileBytes));
-          const pages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
-          pages.forEach(page => pdfDoc.addPage(page));
-          currentPage += pages.length;
+          const sourcePages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
+          
+          sourcePages.forEach(sourcePage => {
+            const { width: originalWidth, height: originalHeight } = sourcePage.getSize();
+            
+            // Beregn skaleringsfaktor for indhold
+            const scale = Math.min(MAX_WIDTH / originalWidth, MAX_HEIGHT / originalHeight);
+            
+            // Nye dimensioner på siden
+            const newWidth = originalWidth * scale;
+            const newHeight = originalHeight * scale;
+            
+            // Centreringskoordinater
+            const x = (A4_WIDTH - newWidth) / 2;
+            const y = (A4_HEIGHT - newHeight) / 2;
+            
+            // Opret ny A4-side
+            const newPage = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
+            
+            // Tegn original side centreret og skaleret
+            newPage.drawPage(sourcePage, {
+              x,
+              y,
+              xScale: scale,
+              yScale: scale,
+            });
+          });
+          
+          currentPage += sourcePages.length;
         } else if (file.type === 'image/jpeg') {
           await convertJpegToPdfPage(file, pdfDoc);
           currentPage++;
