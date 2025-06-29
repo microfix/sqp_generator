@@ -441,38 +441,80 @@ export const generatePDF = async (
       const page = pdfDoc.getPage(i);
       const { width, height } = page.getSize();
       
-      // Format: "Page X of Y" at bottom left
+      // Determine if this is a landscape page (width > height) when smart placement is enabled
+      const isLandscape = smartTextPlacement && width > height;
+      
+      console.log(`Page ${i + 1}: ${width}x${height}, isLandscape: ${isLandscape}, smartTextPlacement: ${smartTextPlacement}`);
+      
+      // Format: "Page X of Y"
       const pageText = `Page ${i + 1} of ${totalPages}`;
       
-      page.drawText(pageText, {
-        x: 50, // Left margin
-        y: 15, // Bottom margin (moved lower)
-        size: 10,
-        font: font,
-        color: rgb(0, 0, 0),
-      });
-      
-      // Add document number in left header if provided
-      if (documentNumberLeft) {
-        page.drawText(documentNumberLeft, {
+      if (smartTextPlacement && isLandscape) {
+        // For landscape pages: Place text considering the rotated content
+        // Bottom-right corner when viewed in landscape orientation
+        page.drawText(pageText, {
+          x: width - 15, // Right edge
+          y: 50, // Bottom with margin
+          size: 10,
+          font: font,
+          color: rgb(0, 0, 0),
+          rotate: degrees(90), // Rotate text to read correctly in landscape
+        });
+        
+        // Document numbers at top when viewed in landscape
+        if (documentNumberLeft) {
+          page.drawText(documentNumberLeft, {
+            x: 15, // Left edge  
+            y: 50, // Bottom with margin
+            size: 10,
+            font: font,
+            color: rgb(0, 0, 0),
+            rotate: degrees(90),
+          });
+        }
+        
+        if (documentNumberCenter) {
+          page.drawText(documentNumberCenter, {
+            x: 15, // Left edge
+            y: height / 2, // Center vertically
+            size: 10,
+            font: font,
+            color: rgb(0, 0, 0),
+            rotate: degrees(90),
+          });
+        }
+      } else {
+        // Standard positioning for portrait pages or when smart placement is disabled
+        page.drawText(pageText, {
           x: 50, // Left margin
-          y: height - 15, // Moved higher up (was -30)
+          y: 15, // Bottom margin
           size: 10,
           font: font,
           color: rgb(0, 0, 0),
         });
-      }
-      
-      // Add document number in right header if provided
-      if (documentNumberCenter) {
-        const textWidth = font.widthOfTextAtSize(documentNumberCenter, 10);
-        page.drawText(documentNumberCenter, {
-          x: width - textWidth - 50, // Right aligned with margin
-          y: height - 15, // Moved higher up (was -30)
-          size: 10,
-          font: font,
-          color: rgb(0, 0, 0),
-        });
+        
+        // Add document number in left header if provided
+        if (documentNumberLeft) {
+          page.drawText(documentNumberLeft, {
+            x: 50, // Left margin
+            y: height - 15, // Top margin
+            size: 10,
+            font: font,
+            color: rgb(0, 0, 0),
+          });
+        }
+        
+        // Add document number in center header if provided
+        if (documentNumberCenter) {
+          const textWidth = font.widthOfTextAtSize(documentNumberCenter, 10);
+          page.drawText(documentNumberCenter, {
+            x: (width - textWidth) / 2, // Centered
+            y: height - 15, // Top margin
+            size: 10,
+            font: font,
+            color: rgb(0, 0, 0),
+          });
+        }
       }
     }
     
