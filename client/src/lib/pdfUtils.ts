@@ -343,14 +343,32 @@ export const generatePDF = async (
           for (const page of pages) {
             const { width, height } = page.getSize();
             
+            // Create a new A4 page with margins
+            const newPage = pdfDoc.addPage([595.28, 841.89]); // Standard A4 size
+            const scale = 0.9; // Scale content to 90%
+            const marginX = (595.28 * (1 - scale)) / 2; // Center horizontally
+            const marginY = (841.89 * (1 - scale)) / 2; // Center vertically
+            
             // If smart text placement is enabled, force all pages to portrait orientation  
             if (smartTextPlacement && width > height) {
-              // Rotate landscape pages 90 degrees to make them portrait
-              page.setRotation(degrees(90));
-              console.log(`Rotated landscape page to portrait (${width}x${height})`);
+              // For landscape pages, draw rotated content
+              newPage.drawPage(page, {
+                x: marginX + (595.28 * scale) / 2,
+                y: marginY + (841.89 * scale) / 2,
+                xScale: scale * (841.89 * scale) / width,
+                yScale: scale * (595.28 * scale) / height,
+                rotate: degrees(90)
+              });
+              console.log(`Rotated and scaled landscape page (${width}x${height})`);
+            } else {
+              // Draw page scaled down with margins
+              newPage.drawPage(page, {
+                x: marginX,
+                y: marginY,
+                xScale: scale * (595.28 / width),
+                yScale: scale * (841.89 / height)
+              });
             }
-            
-            pdfDoc.addPage(page);
           };
           
           currentPage += pages.length;
