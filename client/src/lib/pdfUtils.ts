@@ -1,5 +1,5 @@
 import { FolderStructureType } from "./types";
-import { PDFDocument, StandardFonts, rgb, PDFPage, degrees } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, PDFPage } from "pdf-lib";
 
 // Function to generate a unique ID
 export const generateId = (): string => '_' + Math.random().toString(36).substr(2, 9);
@@ -236,8 +236,7 @@ export const generatePDF = async (
   folderStructure: FolderStructureType,
   outputName: string,
   documentNumberLeft: string = "",
-  documentNumberCenter: string = "",
-  smartTextPlacement: boolean = false
+  documentNumberCenter: string = ""
 ): Promise<void> => {
   try {
     // Create a new PDF document
@@ -339,61 +338,7 @@ export const generatePDF = async (
           const fileBytes = await readFileAsArrayBuffer(file);
           const pdf = await PDFDocument.load(new Uint8Array(fileBytes));
           const pages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
-          
-          // Process each page: scale to 90% and center on A4, rotate landscape if toggle is on
-          for (const page of pages) {
-            const { width, height } = page.getSize();
-            const isLandscape = width > height;
-            
-            // Create new A4 portrait page
-            const newPage = pdfDoc.addPage([595.28, 841.89]);
-            const scale = 0.9;
-            const a4Width = 595.28;
-            const a4Height = 841.89;
-            
-            if (smartTextPlacement && isLandscape) {
-              // Rotate landscape to portrait: swap dimensions for calculation
-              const scaledWidth = a4Width * scale;
-              const scaledHeight = a4Height * scale;
-              const aspectRatio = Math.min(scaledHeight / width, scaledWidth / height);
-              
-              const finalWidth = width * aspectRatio;
-              const finalHeight = height * aspectRatio;
-              
-              // Center the rotated content
-              const offsetX = (a4Width - finalHeight) / 2;
-              const offsetY = (a4Height - finalWidth) / 2;
-              
-              newPage.drawPage(page, {
-                x: offsetX + finalHeight,
-                y: offsetY,
-                xScale: aspectRatio,
-                yScale: aspectRatio,
-                rotate: degrees(90)
-              });
-              console.log(`Rotated landscape ${width}x${height} to portrait`);
-            } else {
-              // Standard scaling to 90% and centering
-              const scaledWidth = a4Width * scale;
-              const scaledHeight = a4Height * scale;
-              const aspectRatio = Math.min(scaledWidth / width, scaledHeight / height);
-              
-              const finalWidth = width * aspectRatio;
-              const finalHeight = height * aspectRatio;
-              
-              // Center on page
-              const offsetX = (a4Width - finalWidth) / 2;
-              const offsetY = (a4Height - finalHeight) / 2;
-              
-              newPage.drawPage(page, {
-                x: offsetX,
-                y: offsetY,
-                xScale: aspectRatio,
-                yScale: aspectRatio
-              });
-            }
-          }
-          
+          pages.forEach(page => pdfDoc.addPage(page));
           currentPage += pages.length;
         } else if (file.type === 'image/jpeg') {
           await convertJpegToPdfPage(file, pdfDoc);
@@ -495,80 +440,38 @@ export const generatePDF = async (
       const page = pdfDoc.getPage(i);
       const { width, height } = page.getSize();
       
-      // Determine if this is a landscape page (width > height) when smart placement is enabled
-      const isLandscape = smartTextPlacement && width > height;
-      
-      console.log(`Page ${i + 1}: ${width}x${height}, isLandscape: ${isLandscape}, smartTextPlacement: ${smartTextPlacement}`);
-      
-      // Format: "Page X of Y"
+      // Format: "Page X of Y" at bottom left
       const pageText = `Page ${i + 1} of ${totalPages}`;
       
-      if (smartTextPlacement && isLandscape) {
-        // For landscape pages: Place text considering the rotated content
-        // Bottom-right corner when viewed in landscape orientation
-        page.drawText(pageText, {
-          x: width - 15, // Right edge
-          y: 50, // Bottom with margin
-          size: 10,
-          font: font,
-          color: rgb(0, 0, 0),
-          rotate: degrees(90), // Rotate text to read correctly in landscape
-        });
-        
-        // Document numbers at top when viewed in landscape
-        if (documentNumberLeft) {
-          page.drawText(documentNumberLeft, {
-            x: 15, // Left edge  
-            y: 50, // Bottom with margin
-            size: 10,
-            font: font,
-            color: rgb(0, 0, 0),
-            rotate: degrees(90),
-          });
-        }
-        
-        if (documentNumberCenter) {
-          page.drawText(documentNumberCenter, {
-            x: 15, // Left edge
-            y: height / 2, // Center vertically
-            size: 10,
-            font: font,
-            color: rgb(0, 0, 0),
-            rotate: degrees(90),
-          });
-        }
-      } else {
-        // Standard positioning for portrait pages or when smart placement is disabled
-        page.drawText(pageText, {
+      page.drawText(pageText, {
+        x: 50, // Left margin
+        y: 15, // Bottom margin (moved lower)
+        size: 10,
+        font: font,
+        color: rgb(0, 0, 0),
+      });
+      
+      // Add document number in left header if provided
+      if (documentNumberLeft) {
+        page.drawText(documentNumberLeft, {
           x: 50, // Left margin
-          y: 15, // Bottom margin
+          y: height - 15, // Moved higher up (was -30)
           size: 10,
           font: font,
           color: rgb(0, 0, 0),
         });
-        
-        // Add document number in left header if provided
-        if (documentNumberLeft) {
-          page.drawText(documentNumberLeft, {
-            x: 50, // Left margin
-            y: height - 15, // Top margin
-            size: 10,
-            font: font,
-            color: rgb(0, 0, 0),
-          });
-        }
-        
-        // Add document number in center header if provided
-        if (documentNumberCenter) {
-          const textWidth = font.widthOfTextAtSize(documentNumberCenter, 10);
-          page.drawText(documentNumberCenter, {
-            x: (width - textWidth) / 2, // Centered
-            y: height - 15, // Top margin
-            size: 10,
-            font: font,
-            color: rgb(0, 0, 0),
-          });
-        }
+      }
+      
+      // Add document number in right header if provided
+      if (documentNumberCenter) {
+        const textWidth = font.widthOfTextAtSize(documentNumberCenter, 10);
+        page.drawText(documentNumberCenter, {
+          x: width - textWidth - 50, // Right aligned with margin
+          y: height - 15, // Moved higher up (was -30)
+          size: 10,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
       }
     }
     
