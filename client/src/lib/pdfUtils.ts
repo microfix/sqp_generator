@@ -340,7 +340,7 @@ export const generatePDF = async (
           const pages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
           pages.forEach(page => pdfDoc.addPage(page));
           currentPage += pages.length;
-        } else if (file.type === 'image/jpeg') {
+        } else if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
           await convertJpegToPdfPage(file, pdfDoc);
           currentPage++;
         }
