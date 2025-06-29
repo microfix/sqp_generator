@@ -214,17 +214,38 @@ const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
 const convertJpegToPdfPage = async (jpegFile: File, pdfDoc: PDFDocument): Promise<PDFPage> => {
   const imageBytes = await readFileAsArrayBuffer(jpegFile);
   const image = await pdfDoc.embedJpg(new Uint8Array(imageBytes));
-  const imageDims = image.scale(1);
   
-  // Create a page with the same dimensions as the image
-  const page = pdfDoc.addPage([imageDims.width, imageDims.height]);
+  // Create a standard A4 page (595.28 x 841.89 points)
+  const page = pdfDoc.addPage([595.28, 841.89]);
+  const { width: pageWidth, height: pageHeight } = page.getSize();
   
-  // Draw the image to fill the page
+  // Get original image dimensions
+  const imageWidth = image.width;
+  const imageHeight = image.height;
+  
+  // Calculate maximum size (90% of A4 page)
+  const maxWidth = pageWidth * 0.9;
+  const maxHeight = pageHeight * 0.9;
+  
+  // Calculate scale factor to fit within 90% of page while maintaining aspect ratio
+  const scaleX = maxWidth / imageWidth;
+  const scaleY = maxHeight / imageHeight;
+  const scale = Math.min(scaleX, scaleY);
+  
+  // Calculate final dimensions
+  const finalWidth = imageWidth * scale;
+  const finalHeight = imageHeight * scale;
+  
+  // Center the image on the page
+  const x = (pageWidth - finalWidth) / 2;
+  const y = (pageHeight - finalHeight) / 2;
+  
+  // Draw the image centered and scaled to 90% max
   page.drawImage(image, {
-    x: 0,
-    y: 0,
-    width: imageDims.width,
-    height: imageDims.height,
+    x: x,
+    y: y,
+    width: finalWidth,
+    height: finalHeight,
   });
   
   return page;
