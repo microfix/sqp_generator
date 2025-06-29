@@ -10,6 +10,8 @@ import { HelpDialog } from "@/components/HelpDialog";
 import { useQuery } from "@tanstack/react-query";
 import { BuildingProject } from "@shared/schema";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export default function PDFGenerator() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -20,6 +22,7 @@ export default function PDFGenerator() {
   const [documentNumberCenter, setDocumentNumberCenter] = useState<string>("");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [smartTextPlacement, setSmartTextPlacement] = useState<boolean>(false);
   
   const coverInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -169,7 +172,8 @@ export default function PDFGenerator() {
         folderStructure, 
         pdfName, 
         documentNumberLeft,
-        documentNumberCenter
+        documentNumberCenter,
+        smartTextPlacement
       );
       toast({
         title: "PDF genereret",
