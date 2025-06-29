@@ -340,39 +340,59 @@ export const generatePDF = async (
           const pdf = await PDFDocument.load(new Uint8Array(fileBytes));
           const pages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
           
+          // Process each page: scale to 90% and center on A4, rotate landscape if toggle is on
           for (const page of pages) {
             const { width, height } = page.getSize();
+            const isLandscape = width > height;
             
-            // Create a new A4 page with margins
-            const newPage = pdfDoc.addPage([595.28, 841.89]); // Standard A4 size
-            const scale = 0.9; // Scale content to 90%
-            const marginX = (595.28 * (1 - scale)) / 2; // Center horizontally
-            const marginY = (841.89 * (1 - scale)) / 2; // Center vertically
+            // Create new A4 portrait page
+            const newPage = pdfDoc.addPage([595.28, 841.89]);
+            const scale = 0.9;
+            const a4Width = 595.28;
+            const a4Height = 841.89;
             
-            // If smart text placement is enabled, force all pages to portrait orientation  
-            if (smartTextPlacement && width > height) {
-              // For landscape pages, draw rotated content to fit in portrait
-              const scaledWidth = 595.28 * scale;
-              const scaledHeight = 841.89 * scale;
+            if (smartTextPlacement && isLandscape) {
+              // Rotate landscape to portrait: swap dimensions for calculation
+              const scaledWidth = a4Width * scale;
+              const scaledHeight = a4Height * scale;
+              const aspectRatio = Math.min(scaledHeight / width, scaledWidth / height);
+              
+              const finalWidth = width * aspectRatio;
+              const finalHeight = height * aspectRatio;
+              
+              // Center the rotated content
+              const offsetX = (a4Width - finalHeight) / 2;
+              const offsetY = (a4Height - finalWidth) / 2;
               
               newPage.drawPage(page, {
-                x: marginX + scaledWidth,
-                y: marginY,
-                xScale: scaledWidth / width,
-                yScale: scaledHeight / height,
+                x: offsetX + finalHeight,
+                y: offsetY,
+                xScale: aspectRatio,
+                yScale: aspectRatio,
                 rotate: degrees(90)
               });
-              console.log(`Rotated and scaled landscape page (${width}x${height})`);
+              console.log(`Rotated landscape ${width}x${height} to portrait`);
             } else {
-              // Draw page scaled down with margins
+              // Standard scaling to 90% and centering
+              const scaledWidth = a4Width * scale;
+              const scaledHeight = a4Height * scale;
+              const aspectRatio = Math.min(scaledWidth / width, scaledHeight / height);
+              
+              const finalWidth = width * aspectRatio;
+              const finalHeight = height * aspectRatio;
+              
+              // Center on page
+              const offsetX = (a4Width - finalWidth) / 2;
+              const offsetY = (a4Height - finalHeight) / 2;
+              
               newPage.drawPage(page, {
-                x: marginX,
-                y: marginY,
-                xScale: scale * (595.28 / width),
-                yScale: scale * (841.89 / height)
+                x: offsetX,
+                y: offsetY,
+                xScale: aspectRatio,
+                yScale: aspectRatio
               });
             }
-          };
+          }
           
           currentPage += pages.length;
         } else if (file.type === 'image/jpeg') {
