@@ -360,31 +360,35 @@ export const generatePDF = async (
           const pdf = await PDFDocument.load(new Uint8Array(fileBytes));
           const sourcePages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
           
-          sourcePages.forEach(sourcePage => {
+          // Process each source page with proper async/await for embedding
+          for (const sourcePage of sourcePages) {
             const { width: originalWidth, height: originalHeight } = sourcePage.getSize();
             
-            // Beregn skaleringsfaktor for indhold
+            // KRITISK: SKAL await embedPage - ellers får vi TypeError
+            const embeddedPage = await pdfDoc.embedPage(sourcePage);
+            
+            // Beregn skaleringsfaktor for indhold - max 90% af A4
             const scale = Math.min(MAX_WIDTH / originalWidth, MAX_HEIGHT / originalHeight);
             
             // Nye dimensioner på siden
             const newWidth = originalWidth * scale;
             const newHeight = originalHeight * scale;
             
-            // Centreringskoordinater
+            // Centreringskoordinater på A4
             const x = (A4_WIDTH - newWidth) / 2;
             const y = (A4_HEIGHT - newHeight) / 2;
             
             // Opret ny A4-side
             const newPage = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
             
-            // Tegn original side centreret og skaleret
-            newPage.drawPage(sourcePage, {
+            // Tegn embedded side centreret og skaleret (INGEN rotation)
+            newPage.drawPage(embeddedPage, {
               x,
               y,
               xScale: scale,
               yScale: scale,
             });
-          });
+          }
           
           currentPage += sourcePages.length;
         } else if (file.type === 'image/jpeg') {
