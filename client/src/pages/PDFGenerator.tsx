@@ -172,7 +172,8 @@ export default function PDFGenerator() {
         folderStructure, 
         pdfName, 
         documentNumberLeft,
-        documentNumberCenter
+        documentNumberCenter,
+        smartTextPlacement
       );
       toast({
         title: "PDF genereret",

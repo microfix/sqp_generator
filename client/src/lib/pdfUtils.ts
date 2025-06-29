@@ -236,7 +236,8 @@ export const generatePDF = async (
   folderStructure: FolderStructureType,
   outputName: string,
   documentNumberLeft: string = "",
-  documentNumberCenter: string = ""
+  documentNumberCenter: string = "",
+  smartTextPlacement: boolean = false
 ): Promise<void> => {
   try {
     // Create a new PDF document
