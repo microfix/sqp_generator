@@ -345,22 +345,12 @@ export const generatePDF = async (
             
             // If smart text placement is enabled, force all pages to portrait orientation
             if (smartTextPlacement && width > height) {
-              // Create a new portrait page and copy rotated content
-              const newPage = pdfDoc.addPage([height, width]); // Swap dimensions for portrait
-              
-              // Draw the original page content rotated 90 degrees to fit portrait
-              newPage.drawPage(page, {
-                x: 0,
-                y: height,
-                rotate: degrees(-90),
-                xScale: height / width,
-                yScale: width / height
-              });
-              
-              console.log(`Rotated landscape page to portrait (${width}x${height} -> ${height}x${width})`);
-            } else {
-              pdfDoc.addPage(page);
+              // Simple rotation: rotate landscape pages 90 degrees to make them portrait
+              page.setRotation(degrees(90));
+              console.log(`Rotated landscape page to portrait (${width}x${height})`);
             }
+            
+            pdfDoc.addPage(page);
           });
           
           currentPage += pages.length;
