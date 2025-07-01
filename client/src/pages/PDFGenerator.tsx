@@ -349,11 +349,34 @@ export default function PDFGenerator() {
               </SelectTrigger>
               <SelectContent className="bg-black border border-accent-1">
                 <SelectItem value="none">Vælg anlæg...</SelectItem>
-                {buildingProjects?.map((project) => (
-                  <SelectItem key={project.id} value={project.id.toString()}>
-                    {project.name}
-                  </SelectItem>
-                ))}
+                {buildingProjects
+                  ?.sort((a, b) => {
+                    // Extract numbers from project names for numerical sorting
+                    const getNumbers = (name: string) => {
+                      const matches = name.match(/\d+/g);
+                      return matches ? matches.map(n => parseInt(n, 10)) : [0];
+                    };
+                    
+                    const aNumbers = getNumbers(a.name);
+                    const bNumbers = getNumbers(b.name);
+                    
+                    // Compare each number in sequence
+                    for (let i = 0; i < Math.max(aNumbers.length, bNumbers.length); i++) {
+                      const aNum = aNumbers[i] || 0;
+                      const bNum = bNumbers[i] || 0;
+                      if (aNum !== bNum) {
+                        return aNum - bNum;
+                      }
+                    }
+                    
+                    // If all numbers are equal, sort alphabetically
+                    return a.name.localeCompare(b.name);
+                  })
+                  .map((project) => (
+                    <SelectItem key={project.id} value={project.id.toString()}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             <BuildingProjectDialog onProjectAdded={refetch} />
