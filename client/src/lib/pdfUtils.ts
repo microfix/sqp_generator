@@ -326,13 +326,40 @@ export const generatePDF = async (
       console.log('Could not load standard cover:', error);
     }
 
-    // Step 2: Add extra page if provided (between cover and TOC)
+    // Step 2: Add extra page if provided (between cover and TOC) - also resize to A4
     if (coverFile) {
       const extraBytes = await readFileAsArrayBuffer(coverFile);
       const extraPdf = await PDFDocument.load(new Uint8Array(extraBytes));
       
       const extraPages = await pdfDoc.copyPages(extraPdf, extraPdf.getPageIndices());
-      extraPages.forEach(page => pdfDoc.addPage(page));
+      extraPages.forEach(page => {
+        const { width: originalWidth, height: originalHeight } = page.getSize();
+        const a4Width = 595.28;
+        const a4Height = 841.89;
+        
+        // Check if already A4 size
+        const widthDiff = Math.abs(originalWidth - a4Width) / a4Width;
+        const heightDiff = Math.abs(originalHeight - a4Height) / a4Height;
+        
+        if (widthDiff >= 0.1 || heightDiff >= 0.1) {
+          // Resize to A4
+          const scaleX = a4Width / originalWidth;
+          const scaleY = a4Height / originalHeight;
+          const scale = Math.min(scaleX, scaleY) * 0.9;
+          
+          page.scaleContent(scale, scale);
+          page.setSize(a4Width, a4Height);
+          
+          const scaledWidth = originalWidth * scale;
+          const scaledHeight = originalHeight * scale;
+          const offsetX = (a4Width - scaledWidth) / 2;
+          const offsetY = (a4Height - scaledHeight) / 2;
+          
+          page.translateContent(offsetX, offsetY);
+        }
+        
+        pdfDoc.addPage(page);
+      });
       currentPage += extraPages.length;
       
       console.log(`Added ${extraPages.length} extra page(s)`);
@@ -360,33 +387,42 @@ export const generatePDF = async (
           const pdf = await PDFDocument.load(new Uint8Array(fileBytes));
           const originalPages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
           
-          // Resize each page to A4 format
+          // Process each page to fit A4 format
           originalPages.forEach(originalPage => {
-            // Create a new A4 page
-            const a4Page = pdfDoc.addPage([595.28, 841.89]); // A4 size in points
-            const { width: a4Width, height: a4Height } = a4Page.getSize();
             const { width: originalWidth, height: originalHeight } = originalPage.getSize();
             
-            // Calculate scale factor to fit the original page within A4 while maintaining aspect ratio
-            const scaleX = a4Width / originalWidth;
-            const scaleY = a4Height / originalHeight;
-            const scale = Math.min(scaleX, scaleY);
+            // Check if page is already close to A4 size (within 10% tolerance)
+            const a4Width = 595.28;
+            const a4Height = 841.89;
+            const widthDiff = Math.abs(originalWidth - a4Width) / a4Width;
+            const heightDiff = Math.abs(originalHeight - a4Height) / a4Height;
             
-            // Calculate final dimensions
-            const finalWidth = originalWidth * scale;
-            const finalHeight = originalHeight * scale;
-            
-            // Center the content on the A4 page
-            const x = (a4Width - finalWidth) / 2;
-            const y = (a4Height - finalHeight) / 2;
-            
-            // Draw the original page content scaled and centered on the A4 page
-            a4Page.drawPage(originalPage, {
-              x: x,
-              y: y,
-              width: finalWidth,
-              height: finalHeight,
-            });
+            if (widthDiff < 0.1 && heightDiff < 0.1) {
+              // Page is already close to A4, just add it directly
+              pdfDoc.addPage(originalPage);
+            } else {
+              // Page needs resizing - scale it to fit A4
+              const scaleX = a4Width / originalWidth;
+              const scaleY = a4Height / originalHeight;
+              const scale = Math.min(scaleX, scaleY) * 0.9; // Use 90% to leave some margin
+              
+              // Scale the page
+              originalPage.scaleContent(scale, scale);
+              
+              // Set page size to A4
+              originalPage.setSize(a4Width, a4Height);
+              
+              // Center the scaled content
+              const scaledWidth = originalWidth * scale;
+              const scaledHeight = originalHeight * scale;
+              const offsetX = (a4Width - scaledWidth) / 2;
+              const offsetY = (a4Height - scaledHeight) / 2;
+              
+              // Translate content to center
+              originalPage.translateContent(offsetX, offsetY);
+              
+              pdfDoc.addPage(originalPage);
+            }
           });
           
           currentPage += originalPages.length;
