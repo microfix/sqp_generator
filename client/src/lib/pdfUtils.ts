@@ -358,9 +358,38 @@ export const generatePDF = async (
         if (file.type === 'application/pdf') {
           const fileBytes = await readFileAsArrayBuffer(file);
           const pdf = await PDFDocument.load(new Uint8Array(fileBytes));
-          const pages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
-          pages.forEach(page => pdfDoc.addPage(page));
-          currentPage += pages.length;
+          const originalPages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
+          
+          // Resize each page to A4 format
+          originalPages.forEach(originalPage => {
+            // Create a new A4 page
+            const a4Page = pdfDoc.addPage([595.28, 841.89]); // A4 size in points
+            const { width: a4Width, height: a4Height } = a4Page.getSize();
+            const { width: originalWidth, height: originalHeight } = originalPage.getSize();
+            
+            // Calculate scale factor to fit the original page within A4 while maintaining aspect ratio
+            const scaleX = a4Width / originalWidth;
+            const scaleY = a4Height / originalHeight;
+            const scale = Math.min(scaleX, scaleY);
+            
+            // Calculate final dimensions
+            const finalWidth = originalWidth * scale;
+            const finalHeight = originalHeight * scale;
+            
+            // Center the content on the A4 page
+            const x = (a4Width - finalWidth) / 2;
+            const y = (a4Height - finalHeight) / 2;
+            
+            // Draw the original page content scaled and centered on the A4 page
+            a4Page.drawPage(originalPage, {
+              x: x,
+              y: y,
+              width: finalWidth,
+              height: finalHeight,
+            });
+          });
+          
+          currentPage += originalPages.length;
         } else if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
           await convertJpegToPdfPage(file, pdfDoc);
           currentPage++;
