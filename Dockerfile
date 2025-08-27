@@ -20,5 +20,8 @@ RUN npm install --omit=dev
 # kopiér færdigbygget output
 COPY --from=build /app/dist ./dist
 
+# 👇 NY linje: kopiér forsiden ind i /app
+COPY --from=build /app/standard_forside.pdf ./standard_forside.pdf
+
 EXPOSE 5000
 CMD ["node", "dist/index.js"]
