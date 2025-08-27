@@ -1,5 +1,6 @@
 import { FolderStructureType } from "./types";
 import { PDFDocument, rgb, PDFPage } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 
 // Helper: unik ID
 export const generateId = (): string =>
@@ -250,6 +251,7 @@ export const generatePDF = async (
   try {
     // 1) Opret PDF + embed UI-font
     const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
     const fontBytes = new Uint8Array(await loadUiFontBytes());
     const uiFont = await pdfDoc.embedFont(fontBytes, { subset: true });
     // Brug samme font som "bold" (variations understøttes ikke direkte af pdf-lib)
