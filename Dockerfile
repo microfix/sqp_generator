@@ -1,15 +1,24 @@
-FROM node:18
-
+# ---- build stage ----
+FROM node:18-alpine AS build
 WORKDIR /app
 
-# Installer git
-RUN apt-get update && apt-get install -y git
+COPY package*.json ./
+RUN npm ci
 
-# Kopiér hele repoet ind i containeren
 COPY . .
+# bygger klient til dist/public og server til dist/index.js
+RUN npm run build
 
-# Installer afhængigheder
-RUN npm install
+# ---- runtime stage ----
+FROM node:18-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
 
-# Start med tsx direkte
-CMD ["npx", "tsx", "server/index.ts"]
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# kopiér færdigbygget output
+COPY --from=build /app/dist ./dist
+
+EXPOSE 5000
+CMD ["node", "dist/index.js"]
