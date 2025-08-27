@@ -257,7 +257,7 @@ export const generatePDF = async (
     const fontBytes: ArrayBuffer = await loadUiFontBytes();
     
     // Embed med fontkit (så Å/Æ/Ø m.m. virker korrekt)
-    const uiFont = await pdfDoc.embedFont(fontBytes, { subset: true });
+    const uiFont = await pdfDoc.embedFont(fontBytes, { subset: false });
     
     // Brug samme font som “bold” indtil vi lægger en rigtig Bold-TTF ind
     const boldFont = uiFont;
