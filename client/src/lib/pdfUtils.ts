@@ -249,12 +249,17 @@ export const generatePDF = async (
   documentNumberCenter: string = ""
 ): Promise<void> => {
   try {
-    // 1) Opret PDF + embed UI-font
+    // 1) Opret PDF + embed UI-font (Regular)
     const pdfDoc = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
-    const fontBytes = new Uint8Array(await loadUiFontBytes());
+    
+    // Læs font som ArrayBuffer (statiske TTF fra /public/fonts/)
+    const fontBytes: ArrayBuffer = await loadUiFontBytes();
+    
+    // Embed med fontkit (så Å/Æ/Ø m.m. virker korrekt)
     const uiFont = await pdfDoc.embedFont(fontBytes, { subset: true });
-    // Brug samme font som "bold" (variations understøttes ikke direkte af pdf-lib)
+    
+    // Brug samme font som “bold” indtil vi lægger en rigtig Bold-TTF ind
     const boldFont = uiFont;
 
     let currentPage = 0;
