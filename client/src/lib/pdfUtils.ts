@@ -11,7 +11,7 @@ const nfc = (s: string) => (s ?? "").normalize("NFC");
 
 // Indlæs font fra public (serveres via /fonts/...)
 const loadUiFontBytes = async (): Promise<ArrayBuffer> => {
-  const res = await fetch("/fonts/NotoSans-VariableFont_wdth,wght.ttf");
+  const res = await fetch("/fonts/NotoSans-Regular.ttf");  // <-- nyt navn
   if (!res.ok) throw new Error("Kunne ikke hente NotoSans fonten");
   return res.arrayBuffer();
 };
